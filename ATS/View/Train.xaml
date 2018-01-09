@@ -1,0 +1,13 @@
+﻿<UserControl x:Class="ATS.Train"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ATS"
+             mc:Ignorable="d" d:DesignWidth="9" d:DesignHeight="9" >
+    <Canvas>
+        <!--<Polygon Points="0,-7 40,-7 47,0 40,7 0,7" Fill="Yellow" ></Polygon>-->
+        <Polygon Points="{Binding Points}" Fill="{Binding TrainColor}" Panel.ZIndex="0"></Polygon>
+        <Label x:Name="Lab" Content="{Binding TrainNum}" Canvas.Left="-20" Canvas.Top="-13" Panel.ZIndex="1"/>
+    </Canvas>
+</UserControl>

@@ -1,0 +1,104 @@
+﻿<Window x:Class="ATS.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:vm="clr-namespace:ATS.ViewModel"
+        xmlns:local="clr-namespace:ATS"
+        Title="MainWindow" Height="712" Width="1469">
+    <!--<Window.DataContext>
+        <vm:MainViewModel></vm:MainViewModel>
+    </Window.DataContext>-->
+    <Grid>
+        <!--设定二列-->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5*"></ColumnDefinition>
+            <ColumnDefinition Width="3*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition Height="150"></RowDefinition>
+        </Grid.RowDefinitions>
+        <!--建站场-->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition></RowDefinition>
+                <RowDefinition Height="25"></RowDefinition>
+            </Grid.RowDefinitions>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Name="MainScroll" Grid.Column="0">
+                <Canvas Name="MainCanvas" Background="Black" Width="7680" Height="1080" Grid.Row="0" MouseDown="MainCanvas_MouseDown" MouseMove="MainCanvas_MouseMove" MouseUp="MainCanvas_MouseUp" >
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="MouseLeftButtonDown">
+                            <i:InvokeCommandAction Command="{Binding CmdMouseLeftButtonDown}" />
+                        </i:EventTrigger>
+                        <i:EventTrigger EventName="MouseRightButtonDown">
+                            <i:InvokeCommandAction Command="{Binding CmdMouseRightButtonDown}"/>
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </Canvas>
+            </ScrollViewer>
+            <!--<ToolBarTray Grid.Row="1">
+                <ToolBar>
+                    <Button Content="总人解" x:Name="b1" Command="{Binding ButtonCommand}" CommandParameter="{Binding ElementName=b1,Path=Content}"></Button>
+                </ToolBar>
+            </ToolBarTray>-->
+        </Grid>
+
+        <!--请叫我分割线-->
+        <GridSplitter Grid.Column="0" BorderThickness="3" BorderBrush="GreenYellow" ShowsPreview="True"></GridSplitter>
+        <DockPanel Grid.Column="1">
+            <Menu DockPanel.Dock="Top">
+                <MenuItem Header="文件">
+                    <MenuItem Header="选择计划"  Command="{Binding OpenPWCommand}"></MenuItem>
+                </MenuItem>
+            </Menu>
+            <!--建图-->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Name="ChartScroll" Grid.Column="1">
+                <lvc:CartesianChart Series="{Binding SelectCollection}"   LegendLocation="Right" x:Name="RunChart" DisableAnimations="True">
+                    <lvc:CartesianChart.AxisY>
+                        <lvc:Axis Title="位置" Foreground="Black" LabelFormatter="{Binding YFormatter}" FontSize="20"  MinValue="0">
+                            <lvc:Axis.Separator>
+                                <lvc:Separator IsEnabled="True" Step="10"></lvc:Separator>
+                            </lvc:Axis.Separator>
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisY>
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis Title="时刻"  Position="RightTop" LabelFormatter="{Binding XFormatter }"  FontSize="20">
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisX>
+                </lvc:CartesianChart>
+            </ScrollViewer>
+        </DockPanel>
+
+        <Grid Grid.Row="1" Grid.ColumnSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="135*"></ColumnDefinition>
+                <ColumnDefinition Width="352*"/>
+                <ColumnDefinition Width="487*"></ColumnDefinition>
+                <ColumnDefinition Width="487*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <DataGrid Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" Grid.ColumnSpan="2">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="当前所处联锁区" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车运行等级" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车速度" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="目的地号" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="是否计划车" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车位置" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <DataGrid Grid.Column="2" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="联锁分区名" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="操作按钮" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="错误提示1" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="错误提示2" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <!--<GridSplitter Grid.Column="0" Grid.Row="1" BorderThickness="3" BorderBrush="GreenYellow" ShowsPreview="True"></GridSplitter>
+            <GridSplitter Grid.Column="1" Grid.Row="1"  BorderThickness="3" BorderBrush="GreenYellow" ShowsPreview="True"></GridSplitter>-->
+        </Grid>
+    </Grid>
+
+</Window>
