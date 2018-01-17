@@ -28,6 +28,65 @@ namespace ATS
         }
         #region 彭亚枫添加部分
 
+       // /// <summary>
+       // /// 配置带箭头的线
+       // /// </summary>
+        public Section()
+        {
+            //RouteLockPen_.EndLineCap = PenLineCap.Triangle;
+            //RouteLockPen_.StartLineCap = PenLineCap.Triangle;
+            //RouteLockPen_.Thickness = 10;
+            DirVectorList = new List<Vector>();
+
+            CreateTriangle();
+            
+        }
+
+        void CreateDirVectors()
+        {
+            foreach (var item in graphics_)
+            {
+                Line l = item as Line;
+                Vector vector = new Vector(l.Pt1.X - l.Pt0.X, l.Pt1.Y - l.Pt0.Y);
+                vector.Normalize();
+                DirVectorList.Add(vector);
+            }
+            Direction = DefaultDirection.UpWard;
+        }
+
+        /// <summary>
+        /// 定义三角形及相关
+        /// </summary>
+        PathGeometry Triangle;
+        double[,] points = { { 12, 0 }, { 0, 6 }, { 0, -6 } };
+        void CreateTriangle()
+        {
+            Triangle = new PathGeometry();
+            List<Point> pointList=new List<Point>();
+            for(int i=0;i<points.Length/2;i++) pointList.Add(new Point(points[i,0],points[i,1]));
+            PathFigure pf = new PathFigure();
+            pf.IsClosed = true;
+            pf.StartPoint = pointList[0];
+            for (int i = 1; i < pointList.Count; i++) pf.Segments.Add(new LineSegment(pointList[i],true));
+            Triangle.Figures.Add(pf);
+        }
+
+        //public void SetDir(DefaultDirection dir)
+        //{
+        //    if (dir == Direction && dir != null)
+        //    {
+
+        //    }
+        //    else if (dir != null)
+        //    {
+        //        for (int i = 0; i < DirVectorList.Count; i++)
+        //        {
+        //            DirVectorList[i].Negate();
+        //        }
+        //        DirVectorList.Reverse();
+        //    }
+        //    Direction = dir;
+        //}
 
         //0直道长度 1斜线长度
         double[] lens = new double[2];
@@ -38,7 +97,11 @@ namespace ATS
         }
 
         //1表示上行，0表示下行
-        public int Direction { get; set; } 
+        //public int Direction { get; set; } 
+        //Direc
+
+        List<Vector> DirVectorList { get; set; }
+
         #endregion
         int startByte_;
         //RightButtonMenuHandler handler_;
@@ -109,18 +172,48 @@ namespace ATS
 
         public Graphic InsuLine { get; set; }
 
+
+        /// <summary>
+        /// 产生变换矩阵
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        Matrix CreateMatrix(Line line)
+        {
+            double offsetX = line.Pt0.X / 2 + line.Pt1.X / 2;
+            double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
+            Matrix matrix = Matrix.Identity;
+            int n = graphics_.IndexOf(line);
+            Vector tv=Direction==DefaultDirection.UpWard?new Vector(1,0):new Vector(-1,0);
+            double cos=tv*DirVectorList[n];
+            //可以这样算是个意外
+            double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
+            angle *= 180 / System.Math.PI;
+            matrix.Rotate(angle);
+            matrix.Translate(offsetX, offsetY);
+            return matrix;
+        }
+        
+
         protected override void OnRender(DrawingContext dc)
         {
+            if (DirVectorList.Count == 0) CreateDirVectors();
             foreach (Line line in graphics_)
             {
                 if (IsBlocked)
                 {
                     line.OnRender(dc, BlockPen_);
                 }
-
+                int n = graphics_.IndexOf(line);
                 line.OnRender(dc, IsOccupied ? OccupyPen_ :
-                    (IsRouteLock ? RouteLockPen_ : 
+                    (IsRouteLock ? RouteLockPen_ :
                     (IsProtected ? ProtectPen_ : DefaultPen_)));
+                //画箭头
+                if (IsRouteLock&&!IsProtected&&!IsOccupied&&graphics_.Count>0)
+                {   
+                    Triangle.Transform = new MatrixTransform(CreateMatrix(line));
+                    dc.DrawGeometry(Brushes.White,RouteLockPen_,Triangle);
+                }
             }
 
             if (!FlashNameFlag)
@@ -150,37 +243,18 @@ namespace ATS
             AddInsulation();
         }
 
-        //public void SetLocalStartByte(CiStartId startID)
-        //{
-        //    SetStartByte(ID - startID.SectionStart);
-        //}
-
         public void ResetDefaultStatus()
         {
             isOccupied_ = true;
             isRouteLock_ = true;
             isBlocked_ = true;
         }
-
-        public void SetCommandMenu()
-        {
-            AddMenuItem("区故解", OnUnlockFailSection);
-            //handler_ = new RightButtonMenuHandler(this);
-        }
-
-        private void OnUnlockFailSection(object sender, RoutedEventArgs e)
-        {
-            //MainWindow.Instance.SetCommandFromMenu(
-            //    MainWindow.Instance.UnlockSectionButton, this);
-        }
-
-
-       
+    
         public void AddInsulation()
         {
             List<Point> leftPts = new List<Point>();
             //GetLeftPoints(leftPts);
-            
+
             //处理区段分割的问题
             Line l = this.Graphics[0] as Line;
             leftPts.Add(l.Pt0);

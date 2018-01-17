@@ -12,6 +12,8 @@ namespace ATS
         public RailSwitch()
         {
             ResetDefaultStatus();
+            CreateTriangle();
+            Direction = Section.DefaultDirection.UpWard;
         }
         public static int StartByte { get; set; }
         static Pen SingleLockPen_ = new Pen(Brushes.White, 7);
@@ -109,6 +111,7 @@ namespace ATS
         }
 
 
+
         //Todolist
         //定位+方向=>方向量集合、长度集合
 
@@ -133,7 +136,6 @@ namespace ATS
         Line reverseNail_ = new Line();
         int startByte_;
         int sectionStartByte_;
-        //RightButtonMenuHandler handler_;
 
         public RailSwitch DoubleSwitch { get; set; }
         public RailSwitch NNSwitch { get; set; } // Normal 2 Normal
@@ -154,12 +156,10 @@ namespace ATS
                     formattedName_.SetForegroundBrush(value == SwitchPosition.PosError ? Brushes.Red : Brushes.Silver);
                     if (value == SwitchPosition.PosError)
                     {
-                        //MainWindow.Instance.SetDeviceFail(Name + "四开");
                         isFailed_ = true;
                     }
                     else
                     {
-                        //MainWindow.Instance.UnSetDeviceFail(Name + "四开");
                         isFailed_ = false;
                     }
                 }
@@ -252,9 +252,66 @@ namespace ATS
         public bool FlashFlag { get; set; }
 
         public bool FlashNameFlag { get; set; }
-        
+
+        #region 彭亚枫添加
+        List<Vector> DirVectorList = new List<Vector>();
+        void CreateDirVectors()
+        {
+            foreach (var item in graphics_)
+            {
+                Line l = item as Line;
+                Vector vector = new Vector(l.Pt1.X - l.Pt0.X, l.Pt1.Y - l.Pt0.Y);
+                vector.Normalize();
+                DirVectorList.Add(vector);
+            }
+            Direction =Section.DefaultDirection.UpWard;
+        }
+
+        /// <summary>
+        /// 定义三角形及相关
+        /// </summary>
+        PathGeometry Triangle;
+        double[,] points = { { 12, 0 }, { 0, 6 }, { 0, -6 } };
+        void CreateTriangle()
+        {
+            Triangle = new PathGeometry();
+            List<Point> pointList = new List<Point>();
+            for (int i = 0; i < points.Length / 2; i++) pointList.Add(new Point(points[i, 0], points[i, 1]));
+            PathFigure pf = new PathFigure();
+            pf.IsClosed = true;
+            pf.StartPoint = pointList[0];
+            for (int i = 1; i < pointList.Count; i++) pf.Segments.Add(new LineSegment(pointList[i], true));
+            Triangle.Figures.Add(pf);
+        }
+
+        /// <summary>
+        /// 产生变换矩阵
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        Matrix CreateMatrix(Line line)
+        {
+            double offsetX = line.Pt0.X / 2 + line.Pt1.X / 2;
+            double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
+            Matrix matrix = Matrix.Identity;
+            int n = graphics_.IndexOf(line);
+            Vector tv = Direction == Section.DefaultDirection.UpWard ? new Vector(1, 0) : new Vector(-1, 0);
+            double cos = tv * DirVectorList[n];
+            //可以这样算是个意外
+            double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
+            angle *= 180 / System.Math.PI;
+            if (IsLeft)
+            angle += 180;
+            matrix.Rotate(angle);
+            matrix.Translate(offsetX, offsetY);
+            return matrix;
+        }
+
+        #endregion
+
         protected override void OnRender(DrawingContext dc)
         {
+            if (DirVectorList.Count == 0) CreateDirVectors();
             UpdateFrontSwitch();
             if (IsBlocked)
             {
@@ -330,6 +387,7 @@ namespace ATS
             }
         }
 
+
         private Pen DrawSection(DrawingContext dc, List<int> sectionIndexs, bool isOccupied, bool isRouteLock, bool isProtected)
         {
             Pen linePen = isOccupied ? Section.OccupyPen :
@@ -340,6 +398,12 @@ namespace ATS
             {
                 Line line = (graphics_[i] as Line);
                 line.OnRender(dc, linePen);
+                //画方向
+                if (linePen == Section.RouteLockPen)
+                {
+                    Triangle.Transform = new MatrixTransform(CreateMatrix(line));
+                    dc.DrawGeometry(Brushes.White, Section.RouteLockPen, Triangle);
+                }
             }
 
             return linePen;
