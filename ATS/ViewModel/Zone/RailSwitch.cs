@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Xml;
 using 线路绘图工具;
 
+
 namespace ATS
 {
     public class RailSwitch : 线路绘图工具.RailSwitch, IRailway, IFlash
@@ -254,8 +255,8 @@ namespace ATS
         public bool FlashNameFlag { get; set; }
 
         #region 彭亚枫添加
-        List<Vector> DirVectorList = new List<Vector>();
-        void CreateDirVectors()
+        public List<Vector> DirVectorList = new List<Vector>();
+        public void CreateDirVectors()
         {
             foreach (var item in graphics_)
             {
@@ -285,7 +286,7 @@ namespace ATS
         }
 
         /// <summary>
-        /// 产生变换矩阵
+        /// 产生旋转、偏移变换矩阵
         /// </summary>
         /// <param name="line"></param>
         /// <returns></returns>
@@ -294,19 +295,17 @@ namespace ATS
             double offsetX = line.Pt0.X / 2 + line.Pt1.X / 2;
             double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
             Matrix matrix = Matrix.Identity;
+            double angle;
             int n = graphics_.IndexOf(line);
             Vector tv = Direction == Section.DefaultDirection.UpWard ? new Vector(1, 0) : new Vector(-1, 0);
-            double cos = tv * DirVectorList[n];
-            //可以这样算是个意外
-            double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
-            angle *= 180 / System.Math.PI;
-            if (IsLeft)
-            angle += 180;
+            //可以这样算是个意外 
+             angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X))*180/Math.PI;
+            //道岔反放则反处理
+            if (IsLeft) angle += 180;
             matrix.Rotate(angle);
             matrix.Translate(offsetX, offsetY);
             return matrix;
         }
-
         #endregion
 
         protected override void OnRender(DrawingContext dc)
@@ -476,11 +475,6 @@ namespace ATS
             sectionStartByte_ = Section.StartByte + SectionID * 3;
             AddInsulation();
         }
-        //public void SetLocalStartByte(CiStartId startID)
-        //{
-        //    SetStartByte(ID - startID.SwitchStart);
-        //    sectionStartByte_ = Section.StartByte + (SectionID - startID.SectionStart) * 3;
-        //}
 
         public void ResetDefaultStatus()
         {

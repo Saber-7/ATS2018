@@ -77,5 +77,17 @@ namespace ATS.View
                 pb.Password += Input;
             }
         }
+
+        private void pb_KeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.Key==Key.Enter)
+            {
+                IntPtr p = System.Runtime.InteropServices.Marshal.SecureStringToBSTR(pb.SecurePassword);
+                string tp = System.Runtime.InteropServices.Marshal.PtrToStringBSTR(p);
+                DecideRes(tp == RightPassWord);
+                this.Close();
+            }
+        }
+
     }
 }

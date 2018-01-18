@@ -100,7 +100,7 @@ namespace ATS
         //public int Direction { get; set; } 
         //Direc
 
-        List<Vector> DirVectorList { get; set; }
+        public List<Vector> DirVectorList { get; set; }
 
         #endregion
         int startByte_;

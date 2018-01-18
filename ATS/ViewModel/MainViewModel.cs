@@ -100,10 +100,10 @@ namespace ATS
             timer.Start();
 
 
-            Thread t3 = new Thread(UpdateCountDown);
-            t3.SetApartmentState(ApartmentState.STA);
-            t3.IsBackground = true;
-            t3.Start();
+            //Thread t3 = new Thread(UpdateCountDown);
+            //t3.SetApartmentState(ApartmentState.STA);
+            //t3.IsBackground = true;
+            //t3.Start();
         }
 
         #region 初始化通信模块
@@ -248,19 +248,19 @@ namespace ATS
                                     sw.WriteLine(DateTime.Now+","+info.Type + "," + info.PositionID + "," + info.Offset+","+info.Direction);
                                 }
 
-                                //动静改变画点
-                                if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
-                                {
-                                    dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
-                                    int nln = t.NowLineNum;
-                                    int pln = t.PlanLineNum;
-                                    t.IsStop = info.IsStop;
-                                    string s = Section2StationName[t.NowSection.Name];
-                                    List<double> dis = (from p in StaNamesDict
-                                                        where p.Value == s
-                                                        select p.Key).ToList();
-                                    SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
-                                }
+                                ////动静改变画点
+                                //if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
+                                //{
+                                //    dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
+                                //    int nln = t.NowLineNum;
+                                //    int pln = t.PlanLineNum;
+                                //    t.IsStop = info.IsStop;
+                                //    string s = Section2StationName[t.NowSection.Name];
+                                //    List<double> dis = (from p in StaNamesDict
+                                //                        where p.Value == s
+                                //                        select p.Key).ToList();
+                                //    SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
+                                //}
 
                                 //开进路
                                 if (t.OpenRoute != null)
@@ -279,11 +279,6 @@ namespace ATS
                                         ac.CreateRouteCommand(commands, (byte)(DevType.TrainButton));
                                         ac.PackCBI2ATS();
                                         CBIMesSend.Add(ac.Package.buf_);
-
-                                        foreach (var item in CBIsCom.REPs)
-                                        {
-                                            //CBIsCom.SendData(ac.Package.buf_, item, 24);
-                                        }
                                     }
                                 }
                                 //车注销
@@ -368,15 +363,15 @@ namespace ATS
         {
             foreach (var item in ATPsMes.GetConsumingEnumerable())
             {
-                ATP2ATS ps=new ATP2ATS();
+                ATP2ATS ps = new ATP2ATS();
                 try
                 {
                     //ps = (ATP2ATS)MySerialize.deSerializeObject(item.Mes);
                     ps.TrainNum = item.Mes[0];
                 }
                 catch
-                { 
-                
+                {
+
                 }
                 if (ps != null)
                 {
@@ -387,18 +382,18 @@ namespace ATS
                     if (t != null)
                     {
                         List<plan> plans = SList[t.PlanLineNum].plan.ToList();
-                        TimeSpan? pts=null ;
+                        TimeSpan? pts = null;
                         try
                         {
                             pts = plans.Find((plan pl) =>
                             {
                                 //return pl.StaName == t.NowSection.Name;
-                                return pl.StaName == Section2StationName[t.NowSection.Name]; 
+                                return pl.StaName == Section2StationName[t.NowSection.Name];
                             }).ReachTime;
                         }
                         catch
-                        { 
-                        
+                        {
+
                         }
 
                         if (pts != null)

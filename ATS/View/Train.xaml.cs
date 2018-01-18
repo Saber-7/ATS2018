@@ -324,7 +324,7 @@ namespace ATS
 
         }
 
-        public Point[] DirPos = new Point[2];
+        public Vector[] DirVector = new Vector[2];
         public Point StartPoint { get; set; }
         public 线路绘图工具.GraphicElement NowG, PreG;
         public double k=1;//比例尺
@@ -342,46 +342,51 @@ namespace ATS
         /// <returns></returns>
         void UpdatePos(线路绘图工具.GraphicElement item,byte dir,double offset)
         {
+            Dir = dir;
             if (item != null)
             {
                 Point origin = new Point(Canvas.GetLeft(item), Canvas.GetTop(item));
+                Vector LineDirVector=new Vector();
                 #region 直道
                 if (item is Section)
                 {
                     Section s = (Section)item;
                     //左走
-                    if (dir == 0xaa)
+                    if (dir == (byte)(TrainDir.左行))
                     {
+
                         if (true)
                         //if (preid!=nowid||pretype!=nowtype)
                         {
                             //D 0斜 1直
                             线路绘图工具.Line l = s.Graphics.Last() as 线路绘图工具.Line;
                             StartPoint = l.Pt1;
-                            DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
+                            DirVector[0] = CalDirUnitVector(l.Pt1, l.Pt0);
                             l = s.Graphics.First() as 线路绘图工具.Line;
-                            DirPos[1] = CalDirVector(l.Pt1, l.Pt0);
+                            DirVector[1] = CalDirUnitVector(l.Pt1, l.Pt0);
                             k = (s.Lens[0] + s.Lens[1]) / s.Distance;
                             preid = nowid;
                             pretype = nowtype;
                         }
                         offset *= k;
+                        
 
                         //l 0直道长度 1斜线长度
                         if (offset > s.Lens[1])
                         {
+                            LineDirVector = s.DirVectorList.First();
                             double len = offset - s.Lens[1];
-                            double x = len * DirPos[1].X + s.Lens[1] * DirPos[0].X + StartPoint.X + origin.X;
-                            double y = len * DirPos[1].Y + s.Lens[1] * DirPos[0].Y + StartPoint.Y + origin.Y;
+                            double x = len * DirVector[1].X + s.Lens[1] * DirVector[0].X + StartPoint.X + origin.X;
+                            double y = len * DirVector[1].Y + s.Lens[1] * DirVector[0].Y + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
                         else
                         {
-                            double x = offset * DirPos[0].X + StartPoint.X + origin.X;
-                            double y = offset * DirPos[0].Y + StartPoint.Y + origin.Y;
+                            LineDirVector = s.DirVectorList.Last();
+                            double x = offset * DirVector[0].X + StartPoint.X + origin.X;
+                            double y = offset * DirVector[0].Y + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
-
                     }
                     else//右行
                     {
@@ -391,9 +396,9 @@ namespace ATS
                             //D 0斜 1直
                             线路绘图工具.Line l = s.Graphics.First() as 线路绘图工具.Line;
                             StartPoint = l.Pt0;
-                            DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
+                            DirVector[0] = CalDirUnitVector(l.Pt0, l.Pt1);
                             l = s.Graphics.Last() as 线路绘图工具.Line;
-                            DirPos[1] = CalDirVector(l.Pt0, l.Pt1);
+                            DirVector[1] = CalDirUnitVector(l.Pt0, l.Pt1);
                             k = (s.Lens[0] + s.Lens[1]) / s.Distance;
                             preid = nowid;
                             pretype = nowtype;
@@ -402,15 +407,17 @@ namespace ATS
                         //l 0直道长度 1斜线长度
                         if (offset > s.Lens[0])
                         {
+                            LineDirVector = s.DirVectorList.Last();
                             double len = offset - s.Lens[0];
-                            double x = len * DirPos[1].X + s.Lens[0] * DirPos[0].X + StartPoint.X + origin.X;
-                            double y = len * DirPos[1].Y + s.Lens[0] * DirPos[0].Y + StartPoint.Y + origin.Y;
+                            double x = len * DirVector[1].X + s.Lens[0] * DirVector[0].X + StartPoint.X + origin.X;
+                            double y = len * DirVector[1].Y + s.Lens[0] * DirVector[0].Y + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
                         else
                         {
-                            double x = offset * DirPos[0].X + StartPoint.X + origin.X;
-                            double y = offset * DirPos[0].Y + StartPoint.Y + origin.Y;
+                            LineDirVector = s.DirVectorList.First();
+                            double x = offset * DirVector[0].X + StartPoint.X + origin.X;
+                            double y = offset * DirVector[0].Y + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
 
@@ -421,39 +428,40 @@ namespace ATS
                 else if (item is RailSwitch)
                 {
                     RailSwitch rs = item as RailSwitch;
-
+                    if (rs.DirVectorList.Count == 0) rs.CreateDirVectors();
                     if (rs.Position == RailSwitch.SwitchPosition.PosNormal)
                     {
-                        if (dir == 0xaa)
+                        LineDirVector = rs.DirVectorList.First();
+                        if (dir == (byte)(TrainDir.左行))
                         {
                             //左行驶
                             //if (preid != nowid || pretype != nowtype)
                             if (true)
                             {
-                                //直 定 反
+                                //定 左
                                 k = (rs.Lens[0] + rs.Lens[1]) / rs.NormalDistance;
                                 if (!rs.IsLeft)
                                 {
-                                    //ok
+                                    
                                     线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
+                                    DirVector[0] = CalDirUnitVector(l.Pt1, l.Pt0);
                                     StartPoint = (rs.Graphics[rs.SectionIndexList[1].Last()] as 线路绘图工具.Line).Pt1;
-                                    DirPos[1] = DirPos[0];//因为直线所以简化处理
+                                    DirVector[1] = DirVector[0];//因为直线所以简化处理
                                 }
                                 else
                                 {
                                     线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
+                                    DirVector[0] = CalDirUnitVector(l.Pt0, l.Pt1);
                                     StartPoint = (rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line).Pt0;
-                                    DirPos[1] = DirPos[0];
+                                    DirVector[1] = DirVector[0];
                                 }
 
                                 preid = nowid;
                                 pretype = nowtype;
                             }
                             offset *= k;
-                            double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                            double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                            double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                            double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
                         else
@@ -463,29 +471,29 @@ namespace ATS
                             //if (preid != nowid || pretype != nowtype)
                             {
 
-                                //直 定 反
+                                //定右
                                 k = (rs.Lens[0] + rs.Lens[1]) / rs.NormalDistance;
                                 if (!rs.IsLeft)
                                 {
                                     StartPoint = (rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line).Pt0;
                                     线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
-                                    DirPos[1] = DirPos[0];//因为直线所以简化处理
+                                    DirVector[0] = CalDirUnitVector(l.Pt0, l.Pt1);
+                                    DirVector[1] = DirVector[0];//因为直线所以简化处理
                                 }
                                 else
                                 {
                                     StartPoint = (rs.Graphics[rs.SectionIndexList[1].Last()] as 线路绘图工具.Line).Pt1;
                                     线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
-                                    DirPos[1] = DirPos[0];//因为直线所以简化处理
+                                    DirVector[0] = CalDirUnitVector(l.Pt1, l.Pt0);
+                                    DirVector[1] = DirVector[0];//因为直线所以简化处理
                                 }
 
                                 preid = nowid;
                                 pretype = nowtype;
                             }
                             offset *= k;
-                            double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                            double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                            double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                            double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                             UpdateTrainPosByXY(new Point(x, y));
                         }
 
@@ -493,7 +501,7 @@ namespace ATS
                     else
                     {
                         //反位左行
-                        if (dir == 0xaa)
+                        if (dir == (byte)(TrainDir.左行))
                         {
                             //if (preid != nowid || pretype != nowtype)
                             if (true)
@@ -501,18 +509,18 @@ namespace ATS
                                 if (!rs.IsLeft)
                                 {
                                     线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[2].Last()] as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
+                                    DirVector[0] = CalDirUnitVector(l.Pt1, l.Pt0);
                                     StartPoint = l.Pt1;
                                     l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                                    DirPos[1] = CalDirVector(l.Pt1, l.Pt0);
+                                    DirVector[1] = CalDirUnitVector(l.Pt1, l.Pt0);
                                 }
                                 else
                                 {
                                     线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
+                                    DirVector[0] = CalDirUnitVector(l.Pt0, l.Pt1);
                                     StartPoint = l.Pt0;
                                     l = rs.Graphics[rs.SectionIndexList[2].Last()] as 线路绘图工具.Line;
-                                    DirPos[1] = CalDirVector(l.Pt0, l.Pt1);
+                                    DirVector[1] = CalDirUnitVector(l.Pt0, l.Pt1);
                                 }
 
                                 //直 定 反
@@ -523,17 +531,20 @@ namespace ATS
                             offset *= k;
                             if (!rs.IsLeft)
                             {
+
                                 if (offset > rs.Lens[2])
                                 {
+                                    LineDirVector = rs.DirVectorList[0];
                                     double len = offset - rs.Lens[2];
-                                    double x = DirPos[0].X * rs.Lens[2] + DirPos[1].X * len + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * rs.Lens[2] + DirPos[1].Y * len + StartPoint.Y + origin.Y;
+                                    double x = DirVector[0].X * rs.Lens[2] + DirVector[1].X * len + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * rs.Lens[2] + DirVector[1].Y * len + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                                 else
                                 {
-                                    double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                                    LineDirVector = rs.DirVectorList[2];
+                                    double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                             }
@@ -541,15 +552,17 @@ namespace ATS
                             {
                                 if (offset > rs.Lens[0])
                                 {
+                                    LineDirVector=rs.DirVectorList[2];
                                     double len = offset - rs.Lens[0];
-                                    double x = DirPos[0].X * rs.Lens[0] + DirPos[1].X * len + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * rs.Lens[0] + DirPos[1].Y * len + StartPoint.Y + origin.Y;
+                                    double x = DirVector[0].X * rs.Lens[0] + DirVector[1].X * len + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * rs.Lens[0] + DirVector[1].Y * len + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                                 else
                                 {
-                                    double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                                    LineDirVector = rs.DirVectorList[0];
+                                    double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                             }
@@ -564,18 +577,18 @@ namespace ATS
                                 if (!rs.IsLeft)
                                 {
                                     线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
+                                    DirVector[0] = CalDirUnitVector(l.Pt0, l.Pt1);
                                     StartPoint = l.Pt0;
                                     l = rs.Graphics[rs.SectionIndexList[2].Last()] as 线路绘图工具.Line;
-                                    DirPos[1] = CalDirVector(l.Pt0, l.Pt1);
+                                    DirVector[1] = CalDirUnitVector(l.Pt0, l.Pt1);
                                 }
                                 else
                                 {
                                     线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[2].Last()] as 线路绘图工具.Line;
-                                    DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
+                                    DirVector[0] = CalDirUnitVector(l.Pt1, l.Pt0);
                                     StartPoint = l.Pt1;
                                     l = rs.Graphics[rs.SectionIndexList[0].Last()] as 线路绘图工具.Line;
-                                    DirPos[1] = CalDirVector(l.Pt1, l.Pt0);
+                                    DirVector[1] = CalDirUnitVector(l.Pt1, l.Pt0);
                                 }
 
                                 //直 定 反
@@ -588,15 +601,17 @@ namespace ATS
                             {
                                 if (offset > rs.Lens[0])
                                 {
+                                    LineDirVector = rs.DirVectorList[2];
                                     double len = offset - rs.Lens[1];
-                                    double x = DirPos[0].X * rs.Lens[0] + len * DirPos[1].X + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * rs.Lens[0] + len * DirPos[1].Y + StartPoint.Y + origin.Y;
+                                    double x = DirVector[0].X * rs.Lens[0] + len * DirVector[1].X + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * rs.Lens[0] + len * DirVector[1].Y + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                                 else
                                 {
-                                    double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                                    LineDirVector = rs.DirVectorList[0];
+                                    double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                             }
@@ -604,132 +619,70 @@ namespace ATS
                             {
                                 if (offset > rs.Lens[2])
                                 {
+                                    LineDirVector = rs.DirVectorList[0];
                                     double len = offset - rs.Lens[2];
-                                    double x = DirPos[0].X * rs.Lens[2] + len * DirPos[1].X + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * rs.Lens[2] + len * DirPos[1].Y + StartPoint.Y + origin.Y;
+                                    double x = DirVector[0].X * rs.Lens[2] + len * DirVector[1].X + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * rs.Lens[2] + len * DirVector[1].Y + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                                 else
                                 {
-                                    double x = DirPos[0].X * offset + StartPoint.X + origin.X;
-                                    double y = DirPos[0].Y * offset + StartPoint.Y + origin.Y;
+                                    LineDirVector = rs.DirVectorList[2];
+                                    double x = DirVector[0].X * offset + StartPoint.X + origin.X;
+                                    double y = DirVector[0].Y * offset + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
                                 }
                             }
 
                         }
                     }
-                    //}
-                    //else
-                    //{
-                    //if (rs.State == SwitchState.PosNormal)
-                    //{
-                    //    if (dir == 0xaa)
-                    //    {
-                    //        if (preid != nowid || pretype != nowtype)
-                    //        {
-                    //            线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                    //            DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
-                    //            DirPos[1] = DirPos[0];//因为直线所以简化处理
-                    //            //直 定 反
-                    //            k = (rs.Lens[0] + rs.Lens[1]) / rs.NormalDistance;
-                    //            StartPoint = (rs.Graphics[rs.SectionIndexList[1].Last()] as 线路绘图工具.Line).Pt1;
-                    //        }
-                    //        offset *= k;
-                    //        double x = DirPos[0].X * offset + StartPoint.X;
-                    //        double y = DirPos[0].Y * offset + StartPoint.Y;
-                    //        UpdateTrainPosByXY(new Point(x, y));
-                    //    }
-                    //    else
-                    //    {
-                    //        if (preid != nowid || pretype != nowtype)
-                    //        {
-                    //            线路绘图工具.Line l = rs.Graphics.First() as 线路绘图工具.Line;
-                    //            DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
-                    //            DirPos[1] = DirPos[0];//因为直线所以简化处理
-                    //            //直 定 反
-                    //            k = (rs.Lens[0] + rs.Lens[1]) / rs.NormalDistance;
-                    //            StartPoint = (rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line).Pt0;
-                    //        }
-                    //        offset *= k;
-                    //        double x = DirPos[0].X * offset + StartPoint.X;
-                    //        double y = DirPos[0].Y * offset + StartPoint.Y;
-                    //        UpdateTrainPosByXY(new Point(x, y));
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    if (dir == 0xaa)
-                    //    {
-                    //        if (preid != nowid || pretype != nowtype)
-                    //        {
-                    //            线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[2].Last()] as 线路绘图工具.Line;
-                    //            DirPos[0] = CalDirVector(l.Pt1, l.Pt0);
-                    //            StartPoint = l.Pt1;
-                    //            l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                    //            DirPos[1] = CalDirVector(l.Pt1, l.Pt0);
-                    //            //直 定 反
-                    //            k = (rs.Lens[0] + rs.Lens[2]) / rs.ReverseDistance;
-                    //        }
-                    //        offset *= k;
-                    //        if (offset > rs.Lens[2])
-                    //        {
-                    //            double len = offset - rs.Lens[2];
-                    //            double x = DirPos[0].X * rs.Lens[2] + DirPos[1].X * len + StartPoint.X;
-                    //            double y = DirPos[0].Y * rs.Lens[2] + DirPos[1].Y * len + StartPoint.Y;
-                    //            UpdateTrainPosByXY(new Point(x, y));
-                    //        }
-                    //        else
-                    //        {
-                    //            double x = DirPos[0].X * offset + StartPoint.X;
-                    //            double y = DirPos[0].Y * offset + StartPoint.Y;
-                    //            UpdateTrainPosByXY(new Point(x, y));
-                    //        }
-                    //    }
-                    //    else
-                    //    {
-                    //        if (preid != nowid || pretype != nowtype)
-                    //        {
-                    //            线路绘图工具.Line l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                    //            DirPos[0] = CalDirVector(l.Pt0, l.Pt1);
-                    //            StartPoint = l.Pt0;
-                    //            l = rs.Graphics[rs.SectionIndexList[0].First()] as 线路绘图工具.Line;
-                    //            DirPos[1] = CalDirVector(l.Pt0, l.Pt1);
-                    //            //直 定 反
-                    //            k = (rs.Lens[0] + rs.Lens[2]) / rs.ReverseDistance;
-                    //        }
-                    //        if (offset > rs.Lens[0])
-                    //        {
-                    //            double len = offset - rs.Lens[1];
-                    //            double x = DirPos[0].X * rs.Lens[0] + len * DirPos[1].X + StartPoint.X;
-                    //            double y = DirPos[0].Y * rs.Lens[0] + len * DirPos[1].X + StartPoint.Y;
-                    //            UpdateTrainPosByXY(new Point(x, y));
-                    //        }
-                    //        else
-                    //        {
-                    //            double x = DirPos[0].X * offset + StartPoint.X;
-                    //            double y = DirPos[0].Y * offset + StartPoint.Y;
-                    //            UpdateTrainPosByXY(new Point(x, y));
-                    //        }
-                    //    }
-
 
                 }
                 #endregion
+          
+                if (item is RailSwitch)
+                {
+                    RailSwitch rs = item as RailSwitch;
+                    if (!rs.IsLeft)
+                    {
+
+                    }
+                    else
+                    {
+                        LineDirVector.Negate();
+                    }
+                }
+                this.TrainRotate(LineDirVector, dir);
             }
 
         }
 
-        Point CalDirVector(Point former, Point latter)
+        void TrainRotate(Vector LineDirVector,int trainDir)
+        { 
+            Vector TrainDirVector=new Vector(trainDir==(byte)TrainDir.左行?-1:1,0);
+            double angle =( -Math.Atan2(TrainDirVector.Y, TrainDirVector.X) + Math.Atan2(LineDirVector.Y, LineDirVector.X) )* 180 / Math.PI;
+            if (trainDir == (byte)(TrainDir.左行))
+                angle -= 180;
+            Matrix matrix=new Matrix();
+
+            matrix.Rotate(angle);
+            this.RenderTransform = new MatrixTransform(matrix);
+        }
+
+
+        /// <summary>
+        /// 求解单位方向向量
+        /// </summary>
+        /// <param name="former"></param>
+        /// <param name="latter"></param>
+        /// <returns></returns>
+        Vector CalDirUnitVector(Point former, Point latter)
         {
-            Point tp = new Point(latter.X - former.X, latter.Y - former.Y);
-            double len = Math.Pow(Math.Pow(tp.Y, 2) + Math.Pow(tp.X, 2), 0.5);
-            if (len != 0)
-            {
-                tp.X /= len;
-                tp.Y /= len;
-            }
-            return tp;
+            Vector v1 = new Vector(former.X, former.Y);
+            Vector v2 = new Vector(latter.X, latter.Y);
+            Vector resv = v2 - v1;
+            resv.Normalize();
+            return resv;
         }
         #endregion
 
@@ -827,5 +780,11 @@ namespace ATS
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+    }
+
+    enum TrainDir:byte
+    {
+        左行=0xaa,
+        右行=0x55
     }
 }
