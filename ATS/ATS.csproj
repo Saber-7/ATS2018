@@ -49,6 +49,9 @@
     <Reference Include="LiveCharts.Wpf">
       <HintPath>..\packages\LiveCharts.Wpf.0.9.7\lib\net45\LiveCharts.Wpf.dll</HintPath>
     </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Expression.Interaction.3.0.40218.0\lib\net45\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
@@ -88,7 +91,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="App.xaml">
+    <ApplicationDefinition Include="Config\App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
@@ -129,7 +132,9 @@
     <Compile Include="ViewModel\Zone\ICheckDistance.cs" />
     <Compile Include="ViewModel\Zone\IRailway.cs" />
     <Compile Include="ViewModel\Zone\OptionalRoute.cs" />
+    <Compile Include="ViewModel\Zone\PSDoor.cs" />
     <Compile Include="ViewModel\Zone\RailSwitch.cs" />
+    <Compile Include="ViewModel\Zone\RelayButton.cs" />
     <Compile Include="ViewModel\Zone\RouteCreator.cs" />
     <Compile Include="ViewModel\Zone\Section.cs" />
     <Compile Include="ViewModel\Zone\Signal.cs" />
@@ -145,7 +150,7 @@
     <Compile Include="View\PlanWindow.xaml.cs">
       <DependentUpon>PlanWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="App.xaml.cs">
+    <Compile Include="Config\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
@@ -188,7 +193,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="packages.config" />
+    <None Include="Config\packages.config" />
     <None Include="View\packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -199,7 +204,7 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config">
+    <None Include="Config\App.config">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>

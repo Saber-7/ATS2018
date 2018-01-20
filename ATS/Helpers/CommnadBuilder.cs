@@ -56,92 +56,42 @@ namespace ATS
                 {
                     FlashSignals.Add((Signal)obj);
                 }
+                if (obj is RelayButton)
+                {
+                    TryBuildCmd(1);
+                }
             }
             else if(cmdqueue.Count%2==0&&cmdqueue.Count>1)
             {
                 while (Wait_seconds > 0)
                     Wait_seconds = 0;
-                TryBuildCmd();
+                TryBuildCmd(2);
             }
         }
 
-        void TryBuildCmd()
+
+        void TryBuildCmd(int CommandLen)
         {
             List<Object> Clicks = new List<object>();
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < CommandLen; i++)
             {
                 Clicks.Add(cmdqueue.Dequeue());
             }
-            //Package(Clicks);
-            SerilizePackage(Clicks);
-            //if (Clicks[0] is Signal && Clicks[1] is Signal) TryBuildRouteCmd(Clicks);
-            //else if (Clicks[0] is string || Clicks[1] is string)
-            //{
-            //    TryBuildButtonCommand(Clicks);
-            //}
+            if (CommandCheck(Clicks))
+            {
+                SerilizePackage(Clicks);
+            }
+            else
+            { 
+            
+            }
+
         }
 
 
-        //void TryBuildRouteCmd(List<Object> Clicks)
-        //{
-        //    Signal s1=Clicks[0] as Signal;
-        //    Signal s2=Clicks[1] as Signal;
-        //    //ATSRoute resRoute = Routes.Find((ATSRoute ar) =>
-        //    //    {
-        //    //        return ar.StartSignal == s1 && ar.EndSignal ==s2;
-        //    //    });
-        //    //if (resRoute != null)
-        //    //{
-        //        byte[] bytes = new byte[24];
-        //        bytes[0] = (byte)s1.StationID;
-        //        bytes[8] =(byte) Clicks.Count;
-        //        bytes[12] =(byte)s1.ID;
-        //        bytes[13] = 1;
-        //        bytes[14] = (byte)s2.ID;
-        //        bytes[15] = 1;
-        //        bool IsAdd=false;
-        //        while(!IsAdd)
-        //        {
-        //            IsAdd = CBIMes.TryAdd(bytes);
-        //        }
-
-        //    //}
-        //}
-
-        //void TryBuildButtonCommand(List<Object> Clicks)
-        //{
-        //    if (Clicks[1] is string)
-        //    {
-        //        Object obj = Clicks[0];
-        //        Clicks[0] = Clicks[1];
-        //        Clicks[1] = obj;
-        //    }
-        //    string b1 = Clicks[0] as string;
-        //    if (b1 != null)
-        //    {
-        //        if (b1==功能按钮.总人解.ToString())
-        //        {
-        //            if (Clicks[1] is Signal)
-        //            {
-        //                Signal s1 = Clicks[1] as Signal;
-        //                byte[] bytes = new byte[24];
-        //                bytes[0] = (byte)s1.StationID;
-        //                bytes[8] = (byte)Clicks.Count;
-        //                bytes[12] = 7;
-        //                bytes[13] = 5;
-        //                bytes[14] = (byte)s1.ID;
-        //                bytes[15] = 1;
-        //                bool IsAdd = false;
-        //                while (!IsAdd)
-        //                {
-        //                    IsAdd = CBIMes.TryAdd(bytes);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //}
-
+        /// <summary>
+        /// 命令名字闪烁操作
+        /// </summary>
         public void FlashName()
         {
             if (Wait_seconds > 0)
@@ -168,59 +118,7 @@ namespace ATS
         }
 
 
-        //装包函数
-        void Package(List<Object> Clicks)
-        {
-            if (Clicks[1] is string)
-            {
-                Object obj = Clicks[0];
-                Clicks[0] = Clicks[1];
-                Clicks[1] = obj;
-            }
-            byte[] bytes = new byte[24];
-            int k=0;
-            if(Clicks[1] is Device)
-            {
-                bytes[0]=(byte)(Clicks[1] as Device).StationID;
-            }
-            bytes[8]=(byte)Clicks.Count;
-            for (int i = 12; i < 20; i += 2)
-            {
-                if(k>=Clicks.Count)
-                    break;
-                if (Clicks[k] is Device)
-                {
-                    bytes[i] = (byte)(Clicks[k] as Device).ID;
-                    if(Clicks[k] is Signal)
-                    bytes[i + 1] = (byte)命令类型.列车按钮;
-                    else if(Clicks[k] is RailSwitch)
-                        bytes[i+1]=(byte)命令类型.道岔按钮;
-                    else if(Clicks[k] is Section)
-                        bytes[i+1]=(byte)命令类型.区段按钮;
-                }
-                else if(Clicks[k] is string)
-                {
-                    string s = Clicks[k].ToString();
-                    foreach (byte item in Enum.GetValues(typeof(功能按钮)))
-                    {
-                        if (Enum.GetName(typeof(功能按钮), item) == s)
-                        {
-                            bytes[i] = item;
-                            break;
-                        }
-                    }
-                    bytes[i + 1] = (byte)命令类型.功能按钮;
-                }
-                k++;
-            }
-            bool IsAdd = false;
-            while (!IsAdd)
-            {
-                IsAdd = CBIMes.TryAdd(bytes);
-            }
-        }
-
-
+        //序列化工具
         StructBytes<ATS2CBICommand> pacTool=new StructBytes<ATS2CBICommand>();
         /// <summary>
         /// 序列化装包函数
@@ -228,55 +126,115 @@ namespace ATS
         /// <param name="Clicks"></param>
         void SerilizePackage(List<Object> Clicks)
         {
-            //string在前，设备id在后
-            if (Clicks[1] is string)
+            
+            switch(Clicks.Count)
             {
-                Object obj = Clicks[0];
-                Clicks[0] = Clicks[1];
-                Clicks[1] = obj;
-            }
-            ATS2CBICommand atsCommand=new ATS2CBICommand();
-            int k = 0;
-            if (Clicks[1] is Device)
-            {
-                atsCommand.StationID = (UInt16)(Clicks[1] as Device).StationID;
-            }
-            atsCommand.DeviceNum = (UInt16)Clicks.Count;
-            atsCommand.DeviceQueue = new byte[8];
-            foreach (var item in Clicks)
-            {
-
-                if (Clicks[k/2] is Device)
-                {
-                    atsCommand.DeviceQueue[k] = (byte)(Clicks[k/2] as Device).ID;
-                    k++;
-                    if (Clicks[k/2] is Signal)
-                        atsCommand.DeviceQueue[k++] = (byte)命令类型.列车按钮;
-                    else if (Clicks[k/2] is RailSwitch)
-                        atsCommand.DeviceQueue[k++] = (byte)命令类型.道岔按钮;
-                    else if (Clicks[k/2] is Section)
-                        atsCommand.DeviceQueue[k++] = (byte)命令类型.区段按钮;
-                }
-                else if (Clicks[k/2] is string || Clicks[k/2] is String)
-                {
-                    string s = Clicks[k/2].ToString();
-                    foreach (byte bt in Enum.GetValues(typeof(功能按钮)))
+                case 1:
+                    { 
+                    //to do 扣车代码
+                    }
+                    break;
+                case 2:
                     {
-                        if (Enum.GetName(typeof(功能按钮), bt) == s)
+                        //string在前，设备id在后
+                        if (Clicks[1] is string)
                         {
-                            atsCommand.DeviceQueue[k++] = bt;
-                            break;
+                            Object obj = Clicks[0];
+                            Clicks[0] = Clicks[1];
+                            Clicks[1] = obj;
+                        }
+                        ATS2CBICommand atsCommand = new ATS2CBICommand();
+
+
+                        if (Clicks[0] is Device)
+                        {
+                            atsCommand.StationID = (UInt16)(Clicks[0] as Device).StationID;
+                        }
+                        else if(Clicks[1] is Device)
+                        {
+                            atsCommand.StationID = (UInt16)(Clicks[1] as Device).StationID;
+                        }
+
+
+                        atsCommand.DeviceNum = (UInt16)Clicks.Count;
+                        atsCommand.DeviceQueue = new byte[8];
+
+                        int k = 0;
+                        foreach (var item in Clicks)
+                        {
+
+                            if (Clicks[k / 2] is Device)
+                            {
+                                atsCommand.DeviceQueue[k] = (byte)(Clicks[k / 2] as Device).ID;
+                                k++;
+                                if (Clicks[k / 2] is Signal)
+                                    atsCommand.DeviceQueue[k] = (byte)命令类型.列车按钮;
+                                else if (Clicks[k / 2] is RailSwitch)
+                                    atsCommand.DeviceQueue[k] = (byte)命令类型.道岔按钮;
+                                else if (Clicks[k / 2] is Section)
+                                    atsCommand.DeviceQueue[k] = (byte)命令类型.区段按钮;
+                                k++;
+                            }
+                            else if (Clicks[k / 2] is string || Clicks[k / 2] is String)
+                            {
+                                string s = Clicks[k / 2].ToString();
+                                foreach (byte bt in Enum.GetValues(typeof(功能按钮)))
+                                {
+                                    if (Enum.GetName(typeof(功能按钮), bt) == s)
+                                    {
+                                        atsCommand.DeviceQueue[k++] = bt;
+                                        break;
+                                    }
+                                }
+                                atsCommand.DeviceQueue[k++] = (byte)命令类型.功能按钮;
+                            }
+                        }
+                        bool IsAdd = false;
+                        byte[] bytes = pacTool.Serialize(atsCommand);
+                        while (!IsAdd)
+                        {
+                            IsAdd = CBIMes.TryAdd(bytes);
                         }
                     }
-                    atsCommand.DeviceQueue[k++] = (byte)命令类型.功能按钮;
-                }
+                    break;
+                default: break;
             }
-            bool IsAdd = false;
-            byte[] bytes = pacTool.Serialize(atsCommand);
-            while (!IsAdd)
+            if (Clicks.Count == 2)
             {
-                IsAdd = CBIMes.TryAdd(bytes);
+
             }
+
+
+        }
+
+        /// <summary>
+        /// 检查是否有错误命令 1.只点击一次对象的时候必然是扣车2.两次点击对象不能相同3.两个信号机的方向不能相反
+        /// </summary>
+        /// <param name="TestObjs"></param>
+        /// <returns></returns>
+        bool CommandCheck(List<Object> TestObjs)
+        {
+            if (TestObjs.Count<2)
+            {
+                return TestObjs.FirstOrDefault() is RelayButton; 
+            }
+            if(TestObjs.Count==2)
+            {
+                if (TestObjs[0] != TestObjs[1])
+                {
+                    if (TestObjs[0] is Signal && TestObjs[1] is Signal)
+                    {
+                        Signal s1 = TestObjs[0] as Signal;
+                        Signal s2 = TestObjs[0] as Signal;
+                        return s1.IsUp == s2.IsUp;
+                    }
+                    else return true;
+                }
+                else return false;
+            }
+            return false;
         }
     }
+
+
 }

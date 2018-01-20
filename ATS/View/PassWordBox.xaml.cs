@@ -52,22 +52,22 @@ namespace ATS.View
         }
 
         String RightPassWord;
+        String[] buttonStrings = { "确认", "取消" };
 
-        public delegate void DecideResHandler(bool res);
-
+        public delegate void DecideResHandler(string pw);
         public event DecideResHandler DecideRes;
         void b_Click(object sender, RoutedEventArgs e)
         {
             Button b=sender as Button;
             string s = b.Content.ToString();
-            if (s =="确认")
+            if (s ==buttonStrings[0])
             {
                 IntPtr p = System.Runtime.InteropServices.Marshal.SecureStringToBSTR(pb.SecurePassword);
                 string tp = System.Runtime.InteropServices.Marshal.PtrToStringBSTR(p);
-                DecideRes(tp == RightPassWord);
+                DecideRes(tp);
                 this.Close();
             }
-            else if (s == "取消")
+            else if (s == buttonStrings[1])
             {
                 this.Close();
             }
@@ -84,7 +84,7 @@ namespace ATS.View
             {
                 IntPtr p = System.Runtime.InteropServices.Marshal.SecureStringToBSTR(pb.SecurePassword);
                 string tp = System.Runtime.InteropServices.Marshal.PtrToStringBSTR(p);
-                DecideRes(tp == RightPassWord);
+                DecideRes(tp);
                 this.Close();
             }
         }

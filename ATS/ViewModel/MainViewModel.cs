@@ -27,7 +27,8 @@ using System.Data.Entity.Core.Metadata.Edm;
 using System.Windows.Input;
 using System.Xml.Linq;
 using System.IO;
-
+using log4net;
+using log4net.Config;
 
 
 namespace ATS
@@ -37,9 +38,10 @@ namespace ATS
         CBTC模式,
         点式ATP模式
     }
+
     public class MainViewModel:ViewModelBase
     {
-
+        private  static readonly ILog Log4ATS=log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         public MainViewModel(Canvas canvas)
         {
             InitCommand();
@@ -50,7 +52,6 @@ namespace ATS
             InitRoute();//初始化进路
             InitCommunication();//初始化通信模块
             InitSection2StationName();
-
 
 
             InitTrain();
@@ -70,6 +71,10 @@ namespace ATS
                 }
                 );
 
+            //log相关
+            //var configFile = new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"ConfigFiles\ATSLog.config"));
+            //XmlConfigurator.Configure(configFile);
+            Log4ATS.Info("打开程序");
         }
 
 
@@ -248,19 +253,19 @@ namespace ATS
                                     sw.WriteLine(DateTime.Now+","+info.Type + "," + info.PositionID + "," + info.Offset+","+info.Direction);
                                 }
 
-                                ////动静改变画点
-                                //if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
-                                //{
-                                //    dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
-                                //    int nln = t.NowLineNum;
-                                //    int pln = t.PlanLineNum;
-                                //    t.IsStop = info.IsStop;
-                                //    string s = Section2StationName[t.NowSection.Name];
-                                //    List<double> dis = (from p in StaNamesDict
-                                //                        where p.Value == s
-                                //                        select p.Key).ToList();
-                                //    SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
-                                //}
+                                //动静改变画点
+                                if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
+                                {
+                                    dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
+                                    int nln = t.NowLineNum;
+                                    int pln = t.PlanLineNum;
+                                    t.IsStop = info.IsStop;
+                                    string s = Section2StationName[t.NowSection.Name];
+                                    List<double> dis = (from p in StaNamesDict
+                                                        where p.Value == s
+                                                        select p.Key).ToList();
+                                    SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
+                                }
 
                                 //开进路
                                 if (t.OpenRoute != null)
@@ -297,6 +302,9 @@ namespace ATS
         }
 
 
+        /// <summary>
+        /// 更新光带和信号机
+        /// </summary>
         void UpdateBandSignal()
         {
             foreach (byte[] tempbytes in CBIMesRec.GetConsumingEnumerable())
@@ -726,9 +734,14 @@ namespace ATS
         /// </summary>
         /// <param name="res"></param>
 
-        void pww_DecideRes(bool res)
+
+        /// <summary>
+        /// 判定密码结果
+        /// </summary>
+        /// <param name="pwtest"></param>
+        void pww_DecideRes(string pwtest)
         {
-            IsPswordRight = res;
+            IsPswordRight =pwtest==password ;
         }
 
 
@@ -756,7 +769,6 @@ namespace ATS
                 cms[2].IsOpen = true;
             }
             tempObject = De;
-            //cb.AddDevice(De);
         }
 
         void buttonCommand(object obj)

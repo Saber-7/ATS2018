@@ -1,9 +1,9 @@
 ﻿using System.Windows.Media;
 using 线路绘图工具;
 
-namespace CBI_LCP
+namespace ATS
 {
-    public class PSDoor : 线路绘图工具.PSDoor, ITrackSide
+    public class PSDoor : 线路绘图工具.PSDoor
     {
         static Pen DisconnectPen = new Pen(Brushes.Yellow, 3);
 
@@ -11,7 +11,7 @@ namespace CBI_LCP
 
         public bool IsStatusChanged { get; set; }
 
-        public bool IsFailed { get; }
+        //public bool IsFailed { get; }
 
         int startByte_;
         bool isOccupied_ = true;
@@ -55,10 +55,10 @@ namespace CBI_LCP
             startByte_ = StartByte + ID;
         }
 
-        public void SetLocalStartByte(CiStartId startID)
-        {
-            SetStartByte(ID - startID.PSDoorStart);
-        }
+        //public void SetLocalStartByte(CiStartId startID)
+        //{
+        //    SetStartByte(ID - startID.PSDoorStart);
+        //}
 
         public void UpdateStatus(byte[] recvBuf, int nRecv)
         {

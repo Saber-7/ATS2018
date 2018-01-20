@@ -782,6 +782,9 @@ namespace ATS
         public event PropertyChangedEventHandler PropertyChanged;
     }
 
+    /// <summary>
+    /// 左==上行，右=下行
+    /// </summary>
     enum TrainDir:byte
     {
         左行=0xaa,

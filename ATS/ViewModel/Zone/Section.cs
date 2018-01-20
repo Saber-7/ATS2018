@@ -184,7 +184,7 @@ namespace ATS
             double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
             Matrix matrix = Matrix.Identity;
             int n = graphics_.IndexOf(line);
-            Vector tv=Direction==DefaultDirection.UpWard?new Vector(1,0):new Vector(-1,0);
+            Vector tv=Direction==DefaultDirection.UpWard?new Vector(-1,0):new Vector(1,0);
             double cos=tv*DirVectorList[n];
             //可以这样算是个意外
             double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
@@ -231,10 +231,11 @@ namespace ATS
         public void UpdateStatus(byte[] recvBuf, int nRecv)
         {
             const byte TRUE_VALUE = 0X05;
-            IsOccupied = (recvBuf[startByte_ + 1] >> 4) == TRUE_VALUE;
             IsRouteLock = (recvBuf[startByte_] & 0x0f) == TRUE_VALUE;
             IsBlocked = (recvBuf[startByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[startByte_ + 1] & 0x0f) == TRUE_VALUE;
+            IsOccupied = (recvBuf[startByte_ + 1] >> 4) == TRUE_VALUE;
+            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TrainDir.左行)?DefaultDirection.UpWard:DefaultDirection.DownWard;
         }
 
         public void SetStartByte(int ID)

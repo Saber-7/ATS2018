@@ -265,7 +265,6 @@ namespace ATS
                 vector.Normalize();
                 DirVectorList.Add(vector);
             }
-            Direction =Section.DefaultDirection.UpWard;
         }
 
         /// <summary>
@@ -297,7 +296,8 @@ namespace ATS
             Matrix matrix = Matrix.Identity;
             double angle;
             int n = graphics_.IndexOf(line);
-            Vector tv = Direction == Section.DefaultDirection.UpWard ? new Vector(1, 0) : new Vector(-1, 0);
+            //左上行
+            Vector tv = Direction == Section.DefaultDirection.UpWard ? new Vector(-1, 0) : new Vector(1, 0);
             //可以这样算是个意外 
              angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X))*180/Math.PI;
             //道岔反放则反处理
@@ -420,11 +420,11 @@ namespace ATS
         public void UpdateStatus(byte[] recvBuf, int nRecv)
         {
             const byte TRUE_VALUE = 0X05;
-            IsOccupied = (recvBuf[sectionStartByte_ + 1] >> 4) == TRUE_VALUE;
             IsRouteLock = (recvBuf[sectionStartByte_] & 0x0f) == TRUE_VALUE;
             IsBlocked = (recvBuf[sectionStartByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[sectionStartByte_ + 1] & 0x0f) == TRUE_VALUE;
-
+            IsOccupied = (recvBuf[sectionStartByte_ + 1] >> 4) == TRUE_VALUE;
+            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TrainDir.左行) ? Section.DefaultDirection.UpWard : Section.DefaultDirection.DownWard;            
             int position = recvBuf[startByte_ + 1] & 0x0f;
             SetPosition(position);
             IsSingleLock = (recvBuf[startByte_] & 0x0f) == TRUE_VALUE;

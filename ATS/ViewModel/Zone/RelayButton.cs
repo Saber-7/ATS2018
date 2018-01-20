@@ -1,13 +1,13 @@
 ﻿using System.Windows.Media;
 using 线路绘图工具;
 
-namespace CBI_LCP
+namespace ATS
 {
-    public class RelayButton : 线路绘图工具.RelayButton, ITrackSide
+    public class RelayButton : 线路绘图工具.RelayButton
     {
         public bool IsStatusChanged { get; set; }
 
-        bool ITrackSide.IsFailed { get; }
+        //bool ITrackSide.IsFailed { get; }
 
         int startByte_;
         bool isOccupied_ = true;
@@ -38,10 +38,10 @@ namespace CBI_LCP
             startByte_ = Section.StartByte + ID * 3;
         }
 
-        public void SetLocalStartByte(CiStartId startID)
-        {
-            SetStartByte(ID - startID.SectionStart);
-        }
+        //public void SetLocalStartByte(CiStartId startID)
+        //{
+        //    SetStartByte(ID - startID.SectionStart);
+        //}
 
         public void UpdateStatus(byte[] recvBuf, int nRecv)
         {
