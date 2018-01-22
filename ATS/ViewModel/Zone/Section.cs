@@ -235,7 +235,7 @@ namespace ATS
             IsBlocked = (recvBuf[startByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[startByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[startByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TrainDir.左行)?DefaultDirection.UpWard:DefaultDirection.DownWard;
+            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TRUE_VALUE)?DefaultDirection.UpWard:DefaultDirection.DownWard;
         }
 
         public void SetStartByte(int ID)

@@ -64,23 +64,7 @@ namespace ATS
         SectionButton=0x04,
         FunctionButton=0x05
     }
-    enum DevID : byte
-    { 
-        上电解锁=0x00,
-        封锁=0x01,
-        解封=0x02,
-        定操=0x03,
-        反操=0x04,
-        单锁=0x05,
-        单解=0x06,
-        总人解=0x07,
-        总取消=0x08,
-        区故解=0x09,
-        信号重开=0x0d,
-        信号关闭=0x0f,
-        设置车队模式=0x1d,
-        取消车队模式=0x1f
-    }
+
     class ATS2CBI
     {
 

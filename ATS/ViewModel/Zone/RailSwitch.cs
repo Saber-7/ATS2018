@@ -424,7 +424,7 @@ namespace ATS
             IsBlocked = (recvBuf[sectionStartByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[sectionStartByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[sectionStartByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TrainDir.左行) ? Section.DefaultDirection.UpWard : Section.DefaultDirection.DownWard;            
+            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TRUE_VALUE) ? Section.DefaultDirection.UpWard : Section.DefaultDirection.DownWard;            
             int position = recvBuf[startByte_ + 1] & 0x0f;
             SetPosition(position);
             IsSingleLock = (recvBuf[startByte_] & 0x0f) == TRUE_VALUE;

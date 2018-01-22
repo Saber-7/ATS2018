@@ -136,6 +136,7 @@ namespace ATS
                     break;
                 case 2:
                     {
+                        ATS2CBICommand atsCommand = new ATS2CBICommand();
                         //string在前，设备id在后
                         if (Clicks[1] is string)
                         {
@@ -143,19 +144,16 @@ namespace ATS
                             Clicks[0] = Clicks[1];
                             Clicks[1] = obj;
                         }
-                        ATS2CBICommand atsCommand = new ATS2CBICommand();
 
-
-                        if (Clicks[0] is Device)
+                        foreach (var item in Clicks)
                         {
-                            atsCommand.StationID = (UInt16)(Clicks[0] as Device).StationID;
+                            if (item is Device)
+                            {
+                                Device de = item as Device;
+                                atsCommand.StationID = (UInt16)de.StationID;
+                                break;
+                            }
                         }
-                        else if(Clicks[1] is Device)
-                        {
-                            atsCommand.StationID = (UInt16)(Clicks[1] as Device).StationID;
-                        }
-
-
                         atsCommand.DeviceNum = (UInt16)Clicks.Count;
                         atsCommand.DeviceQueue = new byte[8];
 
@@ -189,8 +187,8 @@ namespace ATS
                                 atsCommand.DeviceQueue[k++] = (byte)命令类型.功能按钮;
                             }
                         }
-                        bool IsAdd = false;
                         byte[] bytes = pacTool.Serialize(atsCommand);
+                        bool IsAdd = false;
                         while (!IsAdd)
                         {
                             IsAdd = CBIMes.TryAdd(bytes);
@@ -199,12 +197,6 @@ namespace ATS
                     break;
                 default: break;
             }
-            if (Clicks.Count == 2)
-            {
-
-            }
-
-
         }
 
         /// <summary>

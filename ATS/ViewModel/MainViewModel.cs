@@ -56,7 +56,8 @@ namespace ATS
 
             InitTrain();
             ClassifyElements();
-            cb = new CommandBuilder(CBIMesSend, RC.Routes);
+            manualCB = new CommandBuilder(CBIMesSend, RC.Routes);
+            autoCB = new CommandBuilder(CBIMesSend, RC.Routes);
             InitThreads();
 
             //EF暖机,解决第一次打开慢的问题
@@ -105,10 +106,10 @@ namespace ATS
             timer.Start();
 
 
-            //Thread t3 = new Thread(UpdateCountDown);
-            //t3.SetApartmentState(ApartmentState.STA);
-            //t3.IsBackground = true;
-            //t3.Start();
+            Thread t3 = new Thread(UpdateCountDown);
+            t3.SetApartmentState(ApartmentState.STA);
+            t3.IsBackground = true;
+            t3.Start();
         }
 
         #region 初始化通信模块
@@ -215,7 +216,7 @@ namespace ATS
                                         }
                                         catch
                                         {
-                                            MessageBox.Show("请选择计划！");
+
                                         }
                                         if (SelectCollection != null)
                                         {
@@ -248,10 +249,10 @@ namespace ATS
                                 //摆车位
                                 t.UPdateTrainPosByOffset(info.Type, info.PositionID, info.Direction, info.Offset);
 
-                                using (StreamWriter sw = new StreamWriter(@"poslog.csv",true))
-                                {
-                                    sw.WriteLine(DateTime.Now+","+info.Type + "," + info.PositionID + "," + info.Offset+","+info.Direction);
-                                }
+                                //using (StreamWriter sw = new StreamWriter(@"poslog.csv",true))
+                                //{
+                                //    sw.WriteLine(DateTime.Now+","+info.Type + "," + info.PositionID + "," + info.Offset+","+info.Direction);
+                                //}
 
                                 //动静改变画点
                                 if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
@@ -273,17 +274,19 @@ namespace ATS
                                     ATSRoute route = t.OpenRoute;
                                     ATS.Signal signal = route.StartSignal as ATS.Signal;
 
-                                    if (!(signal.SColor == ATS.Signal.SignalColor.Green || signal.SColor == ATS.Signal.SignalColor.Yellow))
+                                    if (signal.SColor != ATS.Signal.SignalColor.Green &&signal.SColor != ATS.Signal.SignalColor.Yellow)
                                     {
-                                        List<byte> commands = new List<byte>();
-                                        commands.Add((byte)(route.StartSignal.ID));
-                                        commands.Add((byte)(route.EndSignal.ID));
-                                        ATS2CBI ac = new ATS2CBI();
-                                        ac.Head = (ushort)route.InSections.First().StationID;
-                                        ac.PackageID = id++;
-                                        ac.CreateRouteCommand(commands, (byte)(DevType.TrainButton));
-                                        ac.PackCBI2ATS();
-                                        CBIMesSend.Add(ac.Package.buf_);
+                                        //List<byte> commands = new List<byte>();
+                                        //commands.Add((byte)(route.StartSignal.ID));
+                                        //commands.Add((byte)(route.EndSignal.ID));
+                                        //ATS2CBI ac = new ATS2CBI();
+                                        //ac.Head = (ushort)route.InSections.First().StationID;
+                                        //ac.PackageID = id++;
+                                        //ac.CreateRouteCommand(commands, (byte)(DevType.TrainButton));
+                                        //ac.PackCBI2ATS();
+                                        //CBIMesSend.Add(ac.Package.buf_);
+                                        autoCB.AddDevice(route.StartSignal.ID);
+                                        autoCB.AddDevice(route.EndSignal.ID);
                                     }
                                 }
                                 //车注销
@@ -424,14 +427,18 @@ namespace ATS
             }
         }
 
+
+        //ATS-->联锁的发送间隔
+        readonly int CBISendInteval = 2 * 1000;
         void SendMesToCBI()
         {
             foreach (var item in CBIMesSend.GetConsumingEnumerable())
             {
                 foreach (var ep in CBIsCom.REPs)
                 {
-                    CBIsCom.SendData(item, ep, 24);
+                    CBIsCom.SendData(item, ep, item.Length);
                 }
+                Thread.Sleep(CBISendInteval);
             }
         }
 
@@ -655,7 +662,7 @@ namespace ATS
             else
             {
                 var De = (object)Mouse.DirectlyOver;
-                cb.AddDevice(De);
+                manualCB.AddDevice(De);
             }
         }
 
@@ -713,16 +720,16 @@ namespace ATS
                 pww.ShowDialog();
                 if (IsPswordRight && tempObject != null)
                 {
-                    cb.AddDevice(tempObject);
-                    cb.AddDevice(name);
+                    manualCB.AddDevice(tempObject);
+                    manualCB.AddDevice(name);
                 }
             }
             else
             {
                 if (tempObject != null)
                 {
-                    cb.AddDevice(tempObject);
-                    cb.AddDevice(name);
+                    manualCB.AddDevice(tempObject);
+                    manualCB.AddDevice(name);
                 }
             }
             tempObject = null;
@@ -773,7 +780,7 @@ namespace ATS
 
         void buttonCommand(object obj)
         {
-            cb.AddDevice(obj);
+            manualCB.AddDevice(obj);
 
         }
 
@@ -1126,7 +1133,7 @@ namespace ATS
                     {
                         this.FlashDevice(ge);
                     }
-                    cb.FlashName();
+                    manualCB.FlashName();
                 }
                 ));
             }
@@ -1252,7 +1259,8 @@ namespace ATS
 
 
 
-        CommandBuilder cb;
+        CommandBuilder manualCB;
+        CommandBuilder autoCB;
 
         //验证密码
         string password = "888";

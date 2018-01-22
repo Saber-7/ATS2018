@@ -277,12 +277,12 @@ namespace ATS
                     nowtype = type;
                     GraphicElement nowSection = Elements.Find((线路绘图工具.GraphicElement item) =>
                     {
-                        if (type == 1&&item is Section)
+                        if (type == (byte)DeviceType.区段 && item is Section)
                         {
                             Section sc = item as Section;
                             return sc.ID == id;
                         }
-                        else if (type == 2&&item is RailSwitch)
+                        else if (type == (byte)DeviceType .道岔&& item is RailSwitch)
                         {
                             RailSwitch rs = item as RailSwitch;
                             return rs.ID == id;
@@ -294,7 +294,7 @@ namespace ATS
                     });
                     if (Res != null&&Res.Count!=0)
                     {
-                        OpenRoute = null;
+                        ATSRoute OpenRoute = null;
                         UpdatePos(nowSection, dir, offset);
                         List<ATSRoute> routes = Res[0].Routes;
                         OpenRoute = routes.Find((ATSRoute r) =>
@@ -317,7 +317,7 @@ namespace ATS
                                 return nowSection == route.InCommingSections.First();
                             });
                         }
-
+                        this.OpenRoute = OpenRoute;
                     }
                     NowSection = nowSection;
                 });
@@ -691,7 +691,7 @@ namespace ATS
 
         List<ATS.ATSRoute> _routes;
 
-        public List<ATS.ATSRoute> Routes
+        List<ATS.ATSRoute> Routes
         {
             get { return _routes; }
             set { _routes = value; }
@@ -701,9 +701,10 @@ namespace ATS
         public void FindPath(string src, string tar,RouteDirection dir)
         {
             Device now = new Device() { Name = src };
-            Res = new List<OptionalRoutes>();
-            SearchPathBy(now, Res, new OptionalRoutes(), src, tar, 0, new HashSet<int>(),dir);
-            Res.Sort();
+            List<OptionalRoutes> res = new List<OptionalRoutes>();
+            SearchPathBy(now, res, new OptionalRoutes(), src, tar, 0, new HashSet<int>(),dir);
+            res.Sort();
+            this.Res = res;
         }
 
 
@@ -711,11 +712,12 @@ namespace ATS
         /// 存放查找结果
         /// </summary>
         List<OptionalRoutes> _res;
+        object reslock = new object(); 
 
         internal List<OptionalRoutes> Res
         {
-            get { return _res; }
-            set { _res = value; }
+            get { lock (reslock) return _res; }
+            set { lock (reslock) _res = value; }
         }
 
         /// <summary>
@@ -770,7 +772,7 @@ namespace ATS
 
         #region 进路处置
 
-        public ATSRoute OpenRoute{get;set;}
+        public  ATSRoute OpenRoute{get;set;}
 
         #endregion
 
@@ -789,5 +791,11 @@ namespace ATS
     {
         左行=0xaa,
         右行=0x55
+    }
+
+    enum DeviceType : byte
+    { 
+        区段=1,
+        道岔=2
     }
 }
