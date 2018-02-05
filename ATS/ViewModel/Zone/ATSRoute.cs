@@ -10,8 +10,13 @@ namespace ATS
 {
     [XmlRoot(ElementName = "Route",Namespace="ATS.ATSRoute")]
     [Serializable]
-    public class ATSRoute : 线路绘图工具.Route
+    public class ATSRoute : 线路绘图工具.Route, IComparable<ATSRoute>
     {
+
+        public ATSRoute()
+        {
+            OptionalRoutes = new List<ATSRoute>();
+        }
 
         [XmlAttribute("Distance")]
         public double Distance { get; set; }
@@ -21,8 +26,17 @@ namespace ATS
         [XmlAttribute("Direction")]
         public RouteDirection Dir { get; set; }
 
+        public List<ATSRoute> OptionalRoutes { get; set; }
 
 
+        #region IComparable<ATSRoute> 成员
+
+        int IComparable<ATSRoute>.CompareTo(ATSRoute other)
+        {
+            return this.Distance.CompareTo(other.Distance);
+        }
+
+        #endregion
     }
 
     [Serializable]

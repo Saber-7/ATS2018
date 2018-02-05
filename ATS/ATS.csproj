@@ -65,6 +65,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
@@ -91,7 +92,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="Config\App.xaml">
+    <ApplicationDefinition Include="Config\ConfigFile\App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
@@ -105,7 +106,9 @@
     <Compile Include="Communication\PackTool\Pack.cs" />
     <Compile Include="Communication\PackTool\Unpack.cs" />
     <Compile Include="Communication\Communication.cs" />
+    <Compile Include="Config\ATSSysConfig.cs" />
     <Compile Include="Helpers\CommnadBuilder.cs" />
+    <Compile Include="Helpers\Convector.cs" />
     <Compile Include="Helpers\IPConfigure.cs" />
     <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Helpers\State.cs" />
@@ -150,7 +153,7 @@
     <Compile Include="View\PlanWindow.xaml.cs">
       <DependentUpon>PlanWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Config\App.xaml.cs">
+    <Compile Include="Config\ConfigFile\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
@@ -193,7 +196,8 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="Config\packages.config" />
+    <None Include="Config\ConfigFile\App.config" />
+    <None Include="Config\ConfigFile\packages.config" />
     <None Include="View\packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -202,11 +206,6 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <AppDesigner Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Config\App.config">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

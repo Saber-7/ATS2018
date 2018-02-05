@@ -20,6 +20,12 @@ namespace ATS
             Routes = new List<ATSRoute>();
         }
 
+        public void  ExtendLength(OptionalRoutes route)
+        {
+            Routes.AddRange(route.Routes);
+            Distance += route.Distance;
+        }
+
         //进路方案
         public List<ATSRoute> Routes { get; set; }
         
@@ -43,10 +49,7 @@ namespace ATS
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <returns></returns>
-        //public int Compare(OptionalRoutes x, OptionalRoutes y)
-        //{
-        //    return x.Distance.CompareTo(y.Distance);
-        //}
+
 
         int IComparable<OptionalRoutes>.CompareTo(OptionalRoutes other)
         {

@@ -16,6 +16,7 @@ using ATS.ViewModel;
 using 线路绘图工具;
 using System.ComponentModel;
 using System.Net;
+using System.Collections.Concurrent;
 
 namespace ATS
 {
@@ -56,6 +57,28 @@ namespace ATS
             TrainNum = num;
             //PathFind("ZHG2", "T0112");
             //FindPath("ZHG2", "T0310", RouteDirection.DIRDOWN);
+            //FindSinglePath("ZHG2", "T0310", RouteDirection.DIRDOWN);
+
+            //var t = Res[0];
+            //ks = new List<int>();
+
+        }
+
+        public Train(List<线路绘图工具.GraphicElement> eles, List<ATSRoute> routes, int num, ConcurrentDictionary<string, string> section2StationName)
+        {
+            InitializeComponent();
+            DataContext = this;
+            //com.ListenControlData();
+            Points = PointList[1];
+            Elements = eles;
+            Routes = routes;
+            TrainNum = num;
+            Section2StationName = section2StationName;
+            //PathFind("ZHG2", "T0112");
+            //FindPath("ZHG2", "T0310", RouteDirection.DIRDOWN);
+            //FindSinglePath("ZHG2", "T0310", RouteDirection.DIRDOWN);
+            //FindPathSD("ZHG2", "T0201", RouteDirection.DIRDOWN, true);
+            FindPathSD("ZHG2", "T0310", RouteDirection.DIRDOWN, false);
             //var t = Res[0];
             //ks = new List<int>();
 
@@ -64,6 +87,8 @@ namespace ATS
 
         bool _IsLive = false;
 
+        //车站和区段的映射关系
+        ConcurrentDictionary<string, string> Section2StationName;
         //车辆是否注册
         public bool IsRegistered
         {
@@ -707,6 +732,120 @@ namespace ATS
             this.Res = res;
         }
 
+        /// <summary>
+        /// 假设折返时折返时返回的对面的站台
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="tar"></param>
+        /// <param name="?"></param>
+        /// <param name="?"></param>
+        public void FindPathSD(string src,string tar,RouteDirection dir,bool isReturn)
+        {
+            List<OptionalRoutes> res = new List<OptionalRoutes>();
+            List<ATSRoute> nowRoutes = Routes.FindAll((ATSRoute ar) =>
+            {
+                foreach (var de in ar.InSections)
+                {
+                    if (de.Name == src) return true;
+                }
+                return false;
+            });
+            for (int i = 0; null != nowRoutes && i < nowRoutes.Count; i++)
+            {
+                SearchSinglePath(nowRoutes[i], res, new OptionalRoutes(), tar, 0, new HashSet<ATSRoute>(), dir);
+            }
+            res.Sort();
+            if (isReturn)
+            {
+
+                foreach (RouteDirection dirItem in Enum.GetValues(typeof(RouteDirection)))
+                {
+                    if (dirItem != dir)
+                    {
+                        dir = dirItem;
+                        break;
+                    }
+                }
+                string srcname =null;
+                try
+                {
+                    srcname = Section2StationName[src];
+                }
+                catch
+                {
+                    MessageBox.Show("区段名称有误，请检查后重新输入");
+                    return;
+                }
+                
+                foreach (var item in Section2StationName)
+                {
+                    if (srcname == item.Value && src != item.Key)
+                    {
+                        src = item.Key;
+                        break;
+                    }
+
+                }
+                tar = src;
+
+                nowRoutes = Routes.FindAll((ATSRoute ar) =>
+                {
+                    foreach (var de in ar.InSections)
+                    {
+                        if (de.Name == tar) return true;
+                    }
+                    return false;
+                });
+
+                List<OptionalRoutes> nextRes = new List<OptionalRoutes>();
+                for (int i = 0; null != nowRoutes && i < nowRoutes.Count; i++)
+                {
+                    SearchSinglePath(nowRoutes[i], res, new OptionalRoutes(), tar, 0, new HashSet<ATSRoute>(), dir);
+                }
+                nextRes.Sort();
+                List<OptionalRoutes> CombineRes = new List<OptionalRoutes>();
+                int j = 0;
+                for (; (res != null && nextRes != null && j < res.Count && j < nextRes.Count); j++)
+                {
+                    res[j].ExtendLength(nextRes[j]);
+                }
+                try
+                {
+                    res.RemoveRange(j, res.Count - j);
+                }
+                catch
+                {
+
+                }
+
+                this.Res = res;
+
+            }
+            else
+            {
+
+                this.Res = res;
+            }
+
+        }
+
+        public void FindSinglePath(string src, string tar, RouteDirection dir)
+        {
+            List<OptionalRoutes> res = new List<OptionalRoutes>();
+            List<ATSRoute> nowRoutes = Routes.FindAll((ATSRoute ar) =>
+                {
+                    foreach (var de in ar.InSections)
+                    {
+                        if (de.Name == src) return true;
+                    }
+                    return false;
+                });
+            for (int i = 0; null != nowRoutes && i < nowRoutes.Count; i++)
+            { 
+                SearchSinglePath(nowRoutes[i],res,new OptionalRoutes(),tar,0,new HashSet<ATSRoute>(),dir);
+            }
+
+        }
 
         /// <summary>
         /// 存放查找结果
@@ -720,6 +859,10 @@ namespace ATS
             set { lock (reslock) _res = value; }
         }
 
+        //递归深度和最大结果数
+        readonly int deepth = 25;
+        readonly int MaxResNum = 5;
+
         /// <summary>
         /// bt爆搜寻路
         /// </summary>
@@ -732,7 +875,7 @@ namespace ATS
         /// <param name="used"></param>
         void SearchPathBy(Device Now, List<OptionalRoutes> res, OptionalRoutes tempRoutes, string src, string tar, int k, HashSet<int> used,RouteDirection routedir)
         {
-            if (k > 20 || res.Count > 10)
+            if (k > deepth || res.Count > MaxResNum)
                 return;
             if (Now.Name == tar)
             {
@@ -767,6 +910,52 @@ namespace ATS
             }
         }
 
+
+
+        /// <summary>
+        /// bt爆搜寻路（可搜折返）,单向寻路,以进路为单位搜索
+        /// </summary>
+        /// <param name="Now"></param>
+        /// <param name="res"></param>
+        /// <param name="tempRoutes"></param>
+        /// <param name="src"></param>
+        /// <param name="tar"></param>
+        /// <param name="k"></param>
+        /// <param name="used"></param>
+        void SearchSinglePath(ATSRoute Now, List<OptionalRoutes> res, OptionalRoutes tempRoutes, string tar, int k, HashSet<ATSRoute> routeUsed, RouteDirection routedir)
+        {
+            if (k > deepth || res.Count >MaxResNum)
+                return;
+            foreach (var de in Now.InSections)
+            {
+                if (de.Name == tar)
+                {
+                    tempRoutes.UpdateDistance();
+                    res.Add(new OptionalRoutes(tempRoutes));
+                    return;
+                }
+            }
+            if (routedir != null)
+            {
+                foreach (var possibleRoute in Now.OptionalRoutes)
+                {
+                    ATS.Signal signal=possibleRoute.StartSignal as ATS.Signal;
+                    if (possibleRoute.Dir == routedir && signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
+                    {
+                        tempRoutes.Routes.Add(possibleRoute);
+                        routeUsed.Add(possibleRoute);
+                        SearchSinglePath(tempRoutes.Routes.Last(), res, tempRoutes, tar, k + 1, routeUsed, routedir);
+                        tempRoutes.Routes.Remove(tempRoutes.Routes.Last());
+                        routeUsed.Remove(possibleRoute);
+                    }
+                }
+            }
+            else
+            { 
+                //todo无方向寻路
+            }
+
+        }
         #endregion
 
 

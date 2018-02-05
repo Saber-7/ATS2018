@@ -69,6 +69,20 @@ namespace ATS
             }
         }
 
+        public void AddTwoDevice(List<object> objs)
+        {
+            foreach (var obj in objs)
+            {
+                cmdqueue.Enqueue(obj);
+            }
+            if (cmdqueue.Count > 1)
+            {
+                while (Wait_seconds > 0)
+                    Wait_seconds = 0;
+                TryBuildCmd(2);
+            }
+        }
+
 
         void TryBuildCmd(int CommandLen)
         {

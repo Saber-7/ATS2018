@@ -29,6 +29,8 @@ using System.Xml.Linq;
 using System.IO;
 using log4net;
 using log4net.Config;
+using System.Configuration;
+using System.Collections.Specialized;
 
 
 namespace ATS
@@ -46,12 +48,13 @@ namespace ATS
         {
             InitCommand();
             MCanvas = canvas;
-            LoadGraphicElements(@"ConfigFiles\StationElements.xml");
-            LoadStationTopo(@"ConfigFiles\StationTopoloty.xml");
-            InitLen();//初始化线路各段长度
+            LoadGraphicElements();
+            LoadStationTopo();
             InitRoute();//初始化进路
             InitCommunication();//初始化通信模块
             InitSection2StationName();
+            //WriteAppConfig();
+            ReadAppConfig();
 
 
             InitTrain();
@@ -72,12 +75,77 @@ namespace ATS
                 }
                 );
 
-            //log相关
-            //var configFile = new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"ConfigFiles\ATSLog.config"));
-            //XmlConfigurator.Configure(configFile);
             Log4ATS.Info("打开程序");
         }
 
+        #region 配置信息相关，部分内容初始化自xml
+
+        //联锁个数
+        int CBINum;
+
+        //列车最小等待时间
+        UInt16 MinWaitTimePerStation;
+
+        //ATS-->联锁的发送间隔
+        int CBISendInteval ;
+
+        //验证密码
+        string password ;
+
+        //需要验证的项目
+        string[] NeedAu = { "总人解", "引导进路", "强制扳道岔定位", "区故解" };
+
+
+
+        //右键内容
+        //信号机、区段、道岔
+        string[][] RightButtonItems ={
+                      new string[]{"总取消", "总人解", "信号关闭", "信号重开", "封锁", "解封", "引导进路"},
+                      new string[]{"总定位", "总反位", "单锁", "单解", "封锁", "解封", "强制扳道岔定位", "强制扳道岔反位"},
+                      new string[]{"封锁", "解封", "区故解"}};
+
+        #endregion
+
+        #region 初始化“静态”内容
+
+        /// <summary>
+        /// 从App.config初始化静态配置内容
+        /// </summary>
+        void ReadAppConfig()
+        {
+            NameValueCollection appSettings = System.Configuration.ConfigurationManager.AppSettings;
+            password = appSettings["password"];
+            try
+            {
+                MinWaitTimePerStation = UInt16.Parse(appSettings["MinWaitTimePerStation"]);
+                CBISendInteval = int.Parse(appSettings["CBISendInteval"]);
+                CBINum = int.Parse(appSettings["CBINum"]);
+            }
+            catch
+            {
+                MinWaitTimePerStation = 7;
+                CBISendInteval = 5000;
+                CBINum = 4;
+            }
+        }
+
+        /// <summary>
+        /// 写App.config配置
+        /// </summary>
+        void WriteAppConfig()
+        {
+            Configuration config = System.Configuration.ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings.Add("password", "888");
+            config.AppSettings.Settings.Add("MinWaitTimePerStation", "7");
+            config.AppSettings.Settings.Add("CBINum","4");
+            config.AppSettings.Settings.Add("CBISendInteval", "5000");
+
+            config.Save();
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+
+        #endregion
 
         private void InitThreads()
         {
@@ -105,7 +173,7 @@ namespace ATS
             SetFlashTimer();
             timer.Start();
 
-
+            //更新倒记计时
             Thread t3 = new Thread(UpdateCountDown);
             t3.SetApartmentState(ApartmentState.STA);
             t3.IsBackground = true;
@@ -164,6 +232,8 @@ namespace ATS
 
         #region 破车和破车跑出的破线
 
+
+        //车辆配置要重写
         List<Train> Trains{get;set;}
         void InitTrain()
         {
@@ -171,7 +241,7 @@ namespace ATS
             List<IPList> ATPs=IPConfigure.IPList.FindAll((IPList ipl)=>{return ipl.DeviceName.Length>2&&ipl.DeviceName.Substring(0,3)=="ATP";});
             foreach (var item in ATPs)
             {
-                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID));
+                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName));
             }
         }
 
@@ -235,7 +305,9 @@ namespace ATS
 
                                             Thread temp = new Thread(() =>
                                             {
-                                                t.FindPath(jiao.StartSection, jiao.EndSection, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP);
+                                                //t.FindPath(jiao.StartSection, jiao.EndSection, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP);
+                                                t.FindSinglePath(jiao.StartSection, jiao.EndSection, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP);
+                                                t.FindPathSD(jiao.StartSection, jiao.EndSection, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP,jiao.ReturnMode=="否"?false:true);
                                             });
                                             temp.SetApartmentState(ApartmentState.STA);
                                             temp.IsBackground = true;
@@ -248,12 +320,6 @@ namespace ATS
                             {
                                 //摆车位
                                 t.UPdateTrainPosByOffset(info.Type, info.PositionID, info.Direction, info.Offset);
-
-                                //using (StreamWriter sw = new StreamWriter(@"poslog.csv",true))
-                                //{
-                                //    sw.WriteLine(DateTime.Now+","+info.Type + "," + info.PositionID + "," + info.Offset+","+info.Direction);
-                                //}
-
                                 //动静改变画点
                                 if (SList != null && info.IsStop != t.IsStop && Section2StationName.ContainsKey(t.NowSection.Name))
                                 {
@@ -267,26 +333,17 @@ namespace ATS
                                                         select p.Key).ToList();
                                     SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
                                 }
-
                                 //开进路
                                 if (t.OpenRoute != null)
                                 {
                                     ATSRoute route = t.OpenRoute;
                                     ATS.Signal signal = route.StartSignal as ATS.Signal;
-
                                     if (signal.SColor != ATS.Signal.SignalColor.Green &&signal.SColor != ATS.Signal.SignalColor.Yellow)
                                     {
-                                        //List<byte> commands = new List<byte>();
-                                        //commands.Add((byte)(route.StartSignal.ID));
-                                        //commands.Add((byte)(route.EndSignal.ID));
-                                        //ATS2CBI ac = new ATS2CBI();
-                                        //ac.Head = (ushort)route.InSections.First().StationID;
-                                        //ac.PackageID = id++;
-                                        //ac.CreateRouteCommand(commands, (byte)(DevType.TrainButton));
-                                        //ac.PackCBI2ATS();
-                                        //CBIMesSend.Add(ac.Package.buf_);
-                                        autoCB.AddDevice(route.StartSignal.ID);
-                                        autoCB.AddDevice(route.EndSignal.ID);
+                                        List<object> objs=new List<object>();
+                                        objs.Add(route.StartSignal);
+                                        objs.Add(route.EndSignal);
+                                        autoCB.AddTwoDevice(objs);
                                     }
                                 }
                                 //车注销
@@ -390,7 +447,7 @@ namespace ATS
                     {
                         return tt.TrainNum == ps.TrainNum;
                     });
-                    if (t != null)
+                    if (t != null&&SList!=null)
                     {
                         List<plan> plans = SList[t.PlanLineNum].plan.ToList();
                         TimeSpan? pts = null;
@@ -412,9 +469,9 @@ namespace ATS
                             DateTime pdt = DateTime.MinValue.Add((TimeSpan)pts);
                             TimeSpan ctt = DateTime.Now - pdt;
                             UInt16 ui;
-                            if (ctt.Seconds < 7)
+                            if (ctt.Seconds < MinWaitTimePerStation)
                             {
-                                ui = 7;
+                                ui = MinWaitTimePerStation;
                             }
                             else
                             {
@@ -428,15 +485,20 @@ namespace ATS
         }
 
 
-        //ATS-->联锁的发送间隔
-        readonly int CBISendInteval = 2 * 1000;
+        
+        //之前内容缓存，剔除重复数据使用
+        byte[] preBytes=new byte[24];
         void SendMesToCBI()
         {
             foreach (var item in CBIMesSend.GetConsumingEnumerable())
             {
-                foreach (var ep in CBIsCom.REPs)
+                if (!item.SequenceEqual(preBytes))
                 {
-                    CBIsCom.SendData(item, ep, item.Length);
+                    foreach (var ep in CBIsCom.REPs)
+                    {
+                        CBIsCom.SendData(item, ep, item.Length);
+                    }
+                    Array.Copy(item, preBytes, item.Length);
                 }
                 Thread.Sleep(CBISendInteval);
             }
@@ -504,11 +566,8 @@ namespace ATS
 
         void InitDisFormatter()
         {
-            //XFormatter=val => new DateTime((long)val).ToString("yyyy MM dd HH:mm:ss");
               XFormatter = val => new DateTime((long)val).ToString("HH:mm:ss");
               YFormatter = (double x) => StaNamesDict.ContainsKey(x) ? StaNamesDict[x] :null ;
-
-  //          YFormatter = (double x) => StaNamesDict[x];
         }
 
         #endregion
@@ -600,24 +659,6 @@ namespace ATS
                     //DataLabels=true
                     //LabelPoint = x => sl[i].TrainNum,
                     });
-                //Train t = Trains.Find((Train tt) => { return tt.TrainNum.ToString()== sl[i].TrainNum; });
-                //if (t != null)
-                //{
-                //    Thread temp = new Thread(() =>
-                //    {
-                //        //PathFind("ZHG1", "T0201");
-                //        //t.FindPath("ZHG1", "T0201");
-                //        selectjiao jiao = SList[t.PlanLineNum];
-                //        t.FindPath(jiao.StartSection, jiao.EndSection);
-                //    });
-                //    temp.SetApartmentState(ApartmentState.STA);
-                //    temp.IsBackground = true;
-                //    temp.Start();
-                //}
-                //else
-                //{ 
-                
-                //}
             }
 
         }
@@ -647,6 +688,7 @@ namespace ATS
 
         void OpenPW(object obj)
         {
+            SelectCollection = new SeriesCollection();
             var pw = new PlanWindow();
             PlanViewModel pvm = pw.DataContext as PlanViewModel;
             pvm.UpdateRunChartAction += InitPointSeries;
@@ -669,23 +711,20 @@ namespace ATS
         //信号机右键，道岔右键，区段右键
         ContextMenu[] cms=new ContextMenu[3];
 
-        //需要验证的项目
-        string[] NeedAu = { "总人解", "引导进路", "强制扳道岔定位", "区故解" };
+
         /// <summary>
         /// 初始化右键菜单
         /// </summary>
         void InitContextMenu()
         {
-            string[][] ss = new string[3][];
-
             //信号机、区段、道岔
-            ss[0] = new string[] { "总取消", "总人解", "信号关闭", "信号重开", "封锁", "解封", "引导进路" };
-            ss[1] = new string[] { "总定位", "总反位", "单锁", "单解", "封锁", "解封", "强制扳道岔定位", "强制扳道岔反位" };
-            ss[2] = new string[] { "封锁", "解封", "区故解" };
+            //ss[0] = new string[] { "总取消", "总人解", "信号关闭", "信号重开", "封锁", "解封", "引导进路" };
+            //ss[1] = new string[] { "总定位", "总反位", "单锁", "单解", "封锁", "解封", "强制扳道岔定位", "强制扳道岔反位" };
+            //ss[2] = new string[] { "封锁", "解封", "区故解" };
             for (int i = 0; i < cms.Length; i++)
             {
                 cms[i] = new ContextMenu();
-                foreach (var item in ss[i])
+                foreach (var item in RightButtonItems[i])
                 {
                     MenuItem mi=new MenuItem();
                     mi.Header = String.Copy(item);
@@ -809,6 +848,8 @@ namespace ATS
 
         Canvas _mCanvas;
 
+        
+
         public Canvas MCanvas
         {
             get { return _mCanvas; }
@@ -826,14 +867,14 @@ namespace ATS
         public static StationTopoloty stationTopoloty_;
 
         //读取站场图
-        private void LoadGraphicElements(string path)
+        private void LoadGraphicElements(string path = @"ConfigFiles\StationElements.xml")
         {
             stationElements_ = StationElements.Open(path);
             stationElements_.CheckSectionSwitches();
             stationElements_.AddElementsToCanvas(MCanvas);
         }
 
-        private void LoadStationTopo(string path)
+        private void LoadStationTopo(string path = @"ConfigFiles\StationTopoloty.xml")
         {
             stationTopoloty_ = new StationTopoloty();
             stationTopoloty_.Open(path, stationElements_.Elements);
@@ -883,229 +924,28 @@ namespace ATS
         }
 
         /// <summary>
-        /// 初始化进路、距离求解
+        /// 初始化进路、距离求解、建立进路图
         /// </summary>
         /// <param name="path"></param>
         void InitRoute(string path = @"ConfigFiles\RouteList.xml")
         {
             RC = new XmlTool<RouteCreator>().DeSerialize(path);
             RC.LoadDevices(stationElements_.Elements);
-            //关联下方向
-            InitPos();
-            //更新距离
-            foreach (ATSRoute route in RC.Routes)
-            { 
-                int sk=0;
-                foreach(Device d in route.InSections)
-                {
-                    if (d is Section)
-                    {
-                        Section s = d as Section;
-                        route.Distance += s.Distance;
-                    }
-                    else
-                    {
-                        RailSwitch rs = d as RailSwitch;
-                        route.Distance += route.SwitchPositions[sk++]==RailSwitch.SwitchPosition.PosNormal ? rs.NormalDistance : rs.ReverseDistance;
-                    }
-                }
-            }
-        }
-
-        //权宜之计
-        void InitPos()
-        {
-            List<RouteDirection> rd = new List<RouteDirection>();
-            XDocument xdoc = XDocument.Load(@"ConfigFiles\RouteList.xml");
-            foreach (XElement item in xdoc.Elements())
-            {
-                foreach (XElement it in item.Elements())
-                {
-                    string s = it.Attribute("Direction").Value;
-                    rd.Add((RouteDirection)Enum.Parse(typeof(RouteDirection), s));
-                }
-            }
-            for (int i = 0; i < rd.Count; i++)
-            {
-                RC.Routes[i].Dir = rd[i];
-            }
-
-        }
-
-
-        /// <summary>
-        /// 进路信号机调整
-        /// </summary>
-        void AdjustRoute()
-        { 
-            List<ATSRoute> routes=RC.Routes;
-            for (int i = 0; i < routes.Count; i++)
-            {
-                List<线路绘图工具.GraphicElement> StartList = stationElements_.Elements.FindAll((GraphicElement element) =>
-                        {
-                            return element.Name == routes[i].StartSignal.Name;
-                        }
-                    );
-                GraphicElement Start=stationElements_.Elements.Find((GraphicElement element)=>
-                    {
-                    return element.Name==routes[i].InSections.FirstOrDefault().Name;
-                    });
-                int len=StartList==null?0:StartList.Count;
-                double min = 10000;
-                for (int j = 0; j < len; j++)
-                { 
-                    double x1=Canvas.GetLeft(StartList[j]);
-                    double x2=Start==null?0:Canvas.GetLeft(Start);
-                    if (Math.Abs(x2 - x1) < min)
-                    {
-                        min = Math.Abs(x2 - x1);
-                        routes[i].StartSignal = StartList[j] as Signal;
-                        int id = routes[i].StartSignal.ID;
-                    }
-                }
-
-                List<GraphicElement> EndList = stationElements_.Elements.FindAll((GraphicElement element) =>
-                    {
-                        return element.Name == routes[i].EndSignal.Name;
-                    });
-                GraphicElement End = stationElements_.Elements.Find((GraphicElement element) =>
-                    {
-                        return element.Name ==routes[i].InSections.LastOrDefault().Name;
-                    });
-                len = EndList == null ? 0 : EndList.Count;
-                min = 10000;
-                for (int j = 0; j < len; j++)
-                {
-                    double x1 = Canvas.GetLeft(EndList[j]);
-                    double x2 = End == null ? 0 : Canvas.GetRight(End);
-                    if (Math.Abs(x2 - x1) < min)
-                    {
-
-                        min = Math.Abs(x2 - x1);
-                        routes[i].EndSignal = EndList[j] as Signal;
-                        int id = routes[i].EndSignal.ID;
-                    }
-                }
-
-            }
         }
 
 
 
-        //计算两点距离
-        double CalDisOf2Point(Point p1, Point p2)
-        { 
-            double x2=Math.Pow(p1.X-p2.X,2);
-            double y2=Math.Pow(p1.Y-p2.Y,2);
-            return Math.Pow((y2 +x2), 0.5);
-        }
 
-        /// <summary>
-        /// p1---->p2
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <returns></returns>
-        Point CalDirVector(Point p1, Point p2)
-        { 
-            Point tp=new Point(p2.X-p1.X,p2.Y-p1.Y);
-            double len = Math.Pow(Math.Pow(tp.Y, 2) + Math.Pow(tp.X, 2), 0.5);
-            if (len != 0) 
-            {
-                tp.X /= len;
-                tp.Y /= len;
-            }
-            return tp;
-        }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rs"></param>要抉择的道岔
-        /// <param name="p"></param>之前的位置
-        /// <returns></returns>
-        int CalStart4Swicth(RailSwitch rs,Point p)
-        {
-            double[] lens = new double[rs.SectionIndexList.Length];
-            for (int i = 0; i < rs.SectionIndexList.Length; i++)
-            {
-                List<int> list = rs.SectionIndexList[i];
-                Line l = rs.Graphics[list.LastOrDefault()] as Line;
-                lens[i] = l==null?int.MaxValue:CalDisOf2Point(p, l.Pt0);
-            }
-            int min=0;
-            double minLen=lens[min];
-            for (int i = 0; i < lens.Length; i++)
-            {
-                if (minLen > lens[i])
-                {
-                    minLen = lens[i];
-                    min = i;
-                }
-            }
-            return min;
-        }
+
+
+
+
+
 
         #endregion
 
-        #region 计算图上元素长度
-
-        void InitLen()
-        {
-            foreach (线路绘图工具.GraphicElement g in stationElements_.Elements)
-            {
-                CalLen(g);
-            }
-        }
-        //完全特殊处理的
-        void CalLen(线路绘图工具.GraphicElement Element)
-        {
-            if (Element is Section)
-            { 
-                Section sc=Element as Section;
-                double fk=0, nk=0;//之前的斜率和当前斜率
-                foreach (Graphic g in sc.Graphics)
-                { 
-                    Line l=g as Line;
-                    nk=(l.Pt1.Y-l.Pt0.Y)/(l.Pt1.X-l.Pt0.X);
-                    if (fk == nk)
-                    {
-                        sc.Lens[0] += CalDisOf2Point(l.Pt1, l.Pt0);
-                    }
-                    else 
-                    {
-                        sc.Lens[1] += CalDisOf2Point(l.Pt1, l.Pt0);
-                    }
-                    fk = nk;
-                }
-            }
-            else if (Element is RailSwitch)
-            {
-                // 直、定、反
-                RailSwitch rs = Element as RailSwitch;
-                foreach (int i in rs.SectionIndexList[0])
-                {
-                    Line l = rs.Graphics[i] as Line;
-                    rs.Lens[0] += CalDisOf2Point(l.Pt0, l.Pt1);
-                }
-                foreach (int i in rs.SectionIndexList[1])
-                {
-                    Line l = rs.Graphics[i] as Line;
-                    rs.Lens[1] += CalDisOf2Point(l.Pt0, l.Pt1);
-                }
-                foreach (int i in rs.SectionIndexList[2])
-                {
-                    Line l = rs.Graphics[i] as Line;
-                    rs.Lens[2] += CalDisOf2Point(l.Pt0, l.Pt1);
-                }
-                Line l1 = rs.Graphics[rs.SectionIndexList[0].Last()] as Line;
-                Line l2 = rs.Graphics[rs.SectionIndexList[1].First()] as Line;
-                Line l3 = rs.Graphics[rs.SectionIndexList[2].First()] as Line;
-                rs.Lens[1] += CalDisOf2Point(l1.Pt1, l2.Pt0);
-                rs.Lens[2] += CalDisOf2Point(l1.Pt1, l3.Pt0);
-            }
-        }
-        #endregion 
+       
 
         #region 定时器设定以及闪烁设置
         System.Timers.Timer timer;
@@ -1177,8 +1017,7 @@ namespace ATS
         //记录不同联锁区段的最小SectionNum
         List<int> RSStartSections = new List<int>();
 
-        //联锁个数
-        readonly int n = 4;
+
 
 
         public void ClassifyElements()
@@ -1199,7 +1038,7 @@ namespace ATS
                 }
             }
             
-            for(int i=0;i<n;i++)
+            for(int i=0;i<CBINum;i++)
             {
                 int k = RailSwitches.FindAll((RailSwitch rs) =>
                     {
@@ -1208,7 +1047,7 @@ namespace ATS
                 RsNum.Add(k);
             }
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < CBINum; i++)
             {
                 int k = Sections.FindAll((Section sc) =>
                 {
@@ -1217,7 +1056,7 @@ namespace ATS
                 SecNum.Add(k);
             }
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < CBINum; i++)
             {
                 int k = Signals.FindAll((Signal s) =>
                     {
@@ -1237,7 +1076,7 @@ namespace ATS
             }
 
             List<int> list=new List<int>();
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < CBINum; i++)
             {
                 int min = int.MaxValue;
                 foreach (Section sc in Sections)
@@ -1258,12 +1097,11 @@ namespace ATS
 
 
 
-
+        //手动命令输入
         CommandBuilder manualCB;
         CommandBuilder autoCB;
 
-        //验证密码
-        string password = "888";
+
 
         Boolean IsPswordRight = false;
         
