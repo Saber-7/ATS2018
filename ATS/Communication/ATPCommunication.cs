@@ -36,7 +36,7 @@ namespace ATS
             catch
             {
                 //处理端口冲突
-                MessageBox.Show(LEP.ToString()+"端口或IP占用！");
+                //MessageBox.Show(LEP.ToString()+"端口或IP占用！");
             }
             MesQueue = mesQueue;
             REPs = new List<EndPoint>();

@@ -17,6 +17,7 @@ using 线路绘图工具;
 using System.ComponentModel;
 using System.Net;
 using System.Collections.Concurrent;
+using log4net;
 
 namespace ATS
 {
@@ -25,6 +26,7 @@ namespace ATS
     /// </summary>
     public partial class Train : UserControl, INotifyPropertyChanged
     {
+        private static readonly ILog Log4ATS = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         public Train()
         {
             InitializeComponent();
@@ -74,16 +76,16 @@ namespace ATS
             Routes = routes;
             TrainNum = num;
             Section2StationName = section2StationName;
+            FindPathSD("ZHG1", "T0107", "T0107", "ZHG1", RouteDirection.DIRDOWN, true);
             //PathFind("ZHG2", "T0112");
             //FindPath("ZHG2", "T0310", RouteDirection.DIRDOWN);
             //FindSinglePath("ZHG2", "T0310", RouteDirection.DIRDOWN);
             //FindPathSD("ZHG2", "T0201", RouteDirection.DIRDOWN, true);
-            FindPathSD("ZHG2", "T0310", RouteDirection.DIRDOWN, false);
-            //var t = Res[0];
+            //FindPathSD("ZHG2", "T0310", RouteDirection.DIRDOWN, false);
+            var t = Res[0];
             //ks = new List<int>();
 
         }
-        //public List<int> ks = new List<int>();
 
         bool _IsLive = false;
 
@@ -293,59 +295,119 @@ namespace ATS
                 });
         }
 
-        public void UPdateTrainPosByOffset(int type,int id,byte dir,double offset)
+        //public void UPdateTrainPosByOffset(int type,int id,byte dir,double offset)
+        //{
+        //    Dir = dir;
+        //    this.Dispatcher.Invoke(() =>
+        //        {
+        //            nowid = id;
+        //            nowtype = type;
+        //            GraphicElement nowSection = Elements.Find((线路绘图工具.GraphicElement item) =>
+        //            {
+        //                if (type == (byte)DeviceType.区段 && item is Section)
+        //                {
+        //                    Section sc = item as Section;
+        //                    return sc.ID == id;
+        //                }
+        //                else if (type == (byte)DeviceType .道岔&& item is RailSwitch)
+        //                {
+        //                    RailSwitch rs = item as RailSwitch;
+        //                    return rs.ID == id;
+        //                }
+        //                else
+        //                {
+        //                    return false;
+        //                }
+        //            });
+
+        //            UpdatePos(nowSection, dir, offset);
+        //            if (Res != null&&Res.Count!=0)
+        //            {
+        //                ATSRoute OpenRoute = null;
+        //                List<ATSRoute> routes = Res[0].Routes;
+        //                OpenRoute = routes.Find((ATSRoute r) =>
+        //                    {
+        //                        foreach (var item in r.InSections)
+        //                        {
+        //                            if (item == nowSection)
+        //                                return true;
+        //                        }
+        //                        return false;
+        //                    });
+        //                if (OpenRoute != null)
+        //                {
+        //                    OpenRoute = routes[routes.IndexOf(OpenRoute) + 1];
+        //                }
+        //                else
+        //                {
+        //                    OpenRoute = Res[0].Routes.Find((ATSRoute route) =>
+        //                    {
+        //                        return nowSection == route.InCommingSections.First();
+        //                    });
+        //                }
+        //                this.OpenRoute = OpenRoute;
+        //            }
+        //            NowSection = nowSection;
+        //        });
+
+        ////}
+
+        public GraphicElement UPdateTrainPosByOffset(int type, int id, byte dir, double offset)
         {
             Dir = dir;
             this.Dispatcher.Invoke(() =>
+            {
+                nowid = id;
+                nowtype = type;
+                GraphicElement nowSection = Elements.Find((线路绘图工具.GraphicElement item) =>
                 {
-                    nowid = id;
-                    nowtype = type;
-                    GraphicElement nowSection = Elements.Find((线路绘图工具.GraphicElement item) =>
+                    if (type == (byte)DeviceType.区段 && item is Section)
                     {
-                        if (type == (byte)DeviceType.区段 && item is Section)
-                        {
-                            Section sc = item as Section;
-                            return sc.ID == id;
-                        }
-                        else if (type == (byte)DeviceType .道岔&& item is RailSwitch)
-                        {
-                            RailSwitch rs = item as RailSwitch;
-                            return rs.ID == id;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    });
-                    if (Res != null&&Res.Count!=0)
-                    {
-                        ATSRoute OpenRoute = null;
-                        UpdatePos(nowSection, dir, offset);
-                        List<ATSRoute> routes = Res[0].Routes;
-                        OpenRoute = routes.Find((ATSRoute r) =>
-                            {
-                                foreach (var item in r.InSections)
-                                {
-                                    if (item == nowSection)
-                                        return true;
-                                }
-                                return false;
-                            });
-                        if (OpenRoute != null)
-                        {
-                            OpenRoute = routes[routes.IndexOf(OpenRoute) + 1];
-                        }
-                        else
-                        {
-                            OpenRoute = Res[0].Routes.Find((ATSRoute route) =>
-                            {
-                                return nowSection == route.InCommingSections.First();
-                            });
-                        }
-                        this.OpenRoute = OpenRoute;
+                        Section sc = item as Section;
+                        return sc.ID == id;
                     }
-                    NowSection = nowSection;
+                    else if (type == (byte)DeviceType.道岔 && item is RailSwitch)
+                    {
+                        RailSwitch rs = item as RailSwitch;
+                        return rs.ID == id;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 });
+
+                UpdatePos(nowSection, dir, offset);
+                if (Res != null && Res.Count != 0)
+                {
+                    ATSRoute OpenRoute = null;
+                    List<ATSRoute> routes = Res[0].Routes;
+                    OpenRoute = routes.Find((ATSRoute r) =>
+                    {
+                        foreach (var item in r.InSections)
+                        {
+                            if (item == nowSection)
+                                return true;
+                        }
+                        return false;
+                    });
+                    if (OpenRoute != null)
+                    {
+                        OpenRoute = routes[routes.IndexOf(OpenRoute) + 1];
+                    }
+                    else
+                    {
+                        OpenRoute = Res[0].Routes.Find((ATSRoute route) =>
+                        {
+                            return nowSection == route.InCommingSections.First();
+                        });
+                    }
+                    this.OpenRoute = OpenRoute;
+                }
+                NowSection = nowSection;
+                return NowSection;
+            });
+            return null;
 
         }
 
@@ -372,6 +434,7 @@ namespace ATS
             {
                 Point origin = new Point(Canvas.GetLeft(item), Canvas.GetTop(item));
                 Vector LineDirVector=new Vector();
+                Canvas.SetZIndex(this, -1);
                 #region 直道
                 if (item is Section)
                 {
@@ -682,14 +745,20 @@ namespace ATS
 
         }
 
+
+        //小车偏移轨道的距离
+        int offset = 10;
+        //向上偏移还是向下偏移-1上1下
+        int offdir = -1;
         void TrainRotate(Vector LineDirVector,int trainDir)
         { 
             Vector TrainDirVector=new Vector(trainDir==(byte)TrainDir.左行?-1:1,0);
+            Vector NorVector = new Vector(TrainDirVector.Y, TrainDirVector.X * offset*offdir);
             double angle =( -Math.Atan2(TrainDirVector.Y, TrainDirVector.X) + Math.Atan2(LineDirVector.Y, LineDirVector.X) )* 180 / Math.PI;
             if (trainDir == (byte)(TrainDir.左行))
                 angle -= 180;
             Matrix matrix=new Matrix();
-
+            matrix.Translate(NorVector.X, NorVector.Y);
             matrix.Rotate(angle);
             this.RenderTransform = new MatrixTransform(matrix);
         }
@@ -735,8 +804,8 @@ namespace ATS
         /// <summary>
         /// 假设折返时折返时返回的对面的站台
         /// </summary>
-        /// <param name="src"></param>
-        /// <param name="tar"></param>
+        /// <param name="src">起点</param>
+        /// <param name="tar">终点</param>
         /// <param name="?"></param>
         /// <param name="?"></param>
         public void FindPathSD(string src,string tar,RouteDirection dir,bool isReturn)
@@ -829,6 +898,78 @@ namespace ATS
 
         }
 
+        public void FindPathSD(string src1, string tar1, string src2, string tar2, RouteDirection dir, bool isReturn)
+        {
+            List<OptionalRoutes> res1 = new List<OptionalRoutes>();
+            List<OptionalRoutes> res2 = new List<OptionalRoutes>();
+            List<ATSRoute> nowRoutes = Routes.FindAll((ATSRoute ar) =>
+            {
+                foreach (var de in ar.InSections)
+                {
+                    if (de.Name == src1) return true;
+                }
+                //foreach (var de in ar.InCommingSections)
+                //{
+                //    if (de.Name == src1) return true;
+                //}
+                return false;
+            });
+            for (int i = 0; null != nowRoutes && i < nowRoutes.Count; i++)
+            {
+                SearchSinglePath(nowRoutes[i], res1, new OptionalRoutes(), tar1, 0, new HashSet<ATSRoute>(), dir);
+            }
+            if (isReturn == false)
+            {
+                res1.Sort();
+                this.Res = res1;
+            }
+            else
+            {
+                foreach (RouteDirection Dir in Enum.GetValues(typeof(RouteDirection)))
+                {
+                    if (dir != Dir)
+                    {
+                        dir = Dir;
+                        break;
+                    }
+                }
+
+                nowRoutes = Routes.FindAll((ATSRoute ar) =>
+                {
+                    foreach (var de in ar.InSections)
+                    {
+                        if (de.Name == src2) return true;
+                    }
+                    //foreach (var de in ar.InCommingSections)
+                    //{
+                    //    if (de.Name == src2) return true;
+                    //}
+                    return false;
+                });
+                for (int i = 0; null != nowRoutes && i < nowRoutes.Count; i++)
+                {
+                    SearchSinglePath(nowRoutes[i], res2, new OptionalRoutes(), tar2, 0, new HashSet<ATSRoute>(), dir);
+                }
+                int k1 = 0, k2 = 0, k = 0;
+                res2.Sort();
+                while (res1 != null && res2 != null && k1 < res1.Count && k2 < res2.Count)
+                {
+                    res1[k1].Routes.AddRange(res2[k2].Routes);
+                    res1[k1].Distance += res2[k2].Distance;
+                    k1++;
+                    k2++;
+                }
+                k = Math.Max(k1, k2);
+                this.Res = new List<OptionalRoutes>();
+                for (int i = 0; i < k; i++)
+                {
+                    this.Res.Add(res1[i]);
+                }
+            }
+
+
+        }
+
         public void FindSinglePath(string src, string tar, RouteDirection dir)
         {
             List<OptionalRoutes> res = new List<OptionalRoutes>();
@@ -860,8 +1001,8 @@ namespace ATS
         }
 
         //递归深度和最大结果数
-        readonly int deepth = 25;
-        readonly int MaxResNum = 5;
+        readonly int deepth = 20;
+        readonly int MaxResNum = 12;
 
         /// <summary>
         /// bt爆搜寻路
@@ -935,12 +1076,22 @@ namespace ATS
                     return;
                 }
             }
+            foreach (var de in Now.LeavingSections)
+            {
+                if (de.Name == tar)
+                {
+                    tempRoutes.UpdateDistance();
+                    res.Add(new OptionalRoutes(tempRoutes));
+                    return;
+                }
+            }
             if (routedir != null)
             {
                 foreach (var possibleRoute in Now.OptionalRoutes)
                 {
                     ATS.Signal signal=possibleRoute.StartSignal as ATS.Signal;
-                    if (possibleRoute.Dir == routedir && signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
+                    //if (possibleRoute.Dir == routedir && signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
+                    if (possibleRoute.Dir == routedir)
                     {
                         tempRoutes.Routes.Add(possibleRoute);
                         routeUsed.Add(possibleRoute);

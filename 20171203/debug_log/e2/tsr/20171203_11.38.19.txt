@@ -1,0 +1,5 @@
+时间,序列号,临时限速对应的ZC数量,zc管辖范围内临时限速的序号,此临时限速的长度,临时限速所属ZC,临时限速数量,SingleTsr_1_值(cm/s),SingleTsr_1_逻辑区段数量,SingleTsr_1_逻辑区段号,SingleTsr_2_值(cm/s),SingleTsr_2_逻辑区段数量,SingleTsr_2_逻辑区段号,SingleTsr_3_值(cm/s),SingleTsr_3_逻辑区段数量,SingleTsr_3_逻辑区段号,SingleTsr_4_值(cm/s),SingleTsr_4_逻辑区段数量,SingleTsr_4_逻辑区段号,SingleTsr_5_值(cm/s),SingleTsr_5_逻辑区段数量,SingleTsr_5_逻辑区段号,SingleTsr_6_值(cm/s),SingleTsr_6_逻辑区段数量,SingleTsr_6_逻辑区段号,SingleTsr_7_值(cm/s),SingleTsr_7_逻辑区段数量,SingleTsr_7_逻辑区段号,SingleTsr_8_值(cm/s),SingleTsr_8_逻辑区段数量,SingleTsr_8_逻辑区段号,SingleTsr_9_值(cm/s),SingleTsr_9_逻辑区段数量,SingleTsr_9_逻辑区段号,SingleTsr_10_值(cm/s),SingleTsr_10_逻辑区段数量,SingleTsr_10_逻辑区段号,
+2017-12-3 11:38:19,6747,0,0,
+2017-12-3 11:38:19,6747,0,0,
+2017-12-3 11:38:19,6747,0,0,
+2017-12-3 11:38:19,6747,0,0,

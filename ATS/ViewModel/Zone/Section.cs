@@ -109,7 +109,7 @@ namespace ATS
         public bool IsStatusChanged { get; set; }
 
         bool isOccupied_ = true;
-        bool IsOccupied
+        public bool IsOccupied
         {
             get { return isOccupied_; }
             set
@@ -186,7 +186,7 @@ namespace ATS
             int n = graphics_.IndexOf(line);
             Vector tv=Direction==DefaultDirection.UpWard?new Vector(-1,0):new Vector(1,0);
             double cos=tv*DirVectorList[n];
-            //可以这样算是个意外
+            //可以这样算是个意外,但是可以证明正确
             double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
             angle *= 180 / System.Math.PI;
             matrix.Rotate(angle);
