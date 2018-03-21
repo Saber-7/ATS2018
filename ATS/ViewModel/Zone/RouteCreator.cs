@@ -128,6 +128,10 @@ namespace ATS
                     Routes[i].OptionalRoutes.Sort();
                 }
             }
+            //foreach (var item in Routes)
+            //{
+                
+            //}
         }
     }
 }

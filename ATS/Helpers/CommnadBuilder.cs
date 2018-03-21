@@ -20,6 +20,13 @@ namespace ATS
             Routes = routes;
         }
 
+        public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes, FixedConQueue<HandleMes> handleMess,List<HandleMes> handleMesDisplay)
+        {
+            this.CBIMes = CBIMes;
+            Routes = routes;
+            this.handleMess=handleMess;
+            this.handleMesDisplay = handleMesDisplay;
+        }
         public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes,List<Signal> FlashSignals)
         {
             this.CBIMes = CBIMes;
@@ -30,7 +37,8 @@ namespace ATS
         BlockingCollection<byte[]> CBIMes;
         List<ATSRoute> Routes;
         List<Signal> FlashSignals=new List<Signal>();
-
+        FixedConQueue<HandleMes> handleMess;
+        List<HandleMes> handleMesDisplay;
         readonly int Max_Wait_Seconds = 20;
 
 
@@ -158,7 +166,10 @@ namespace ATS
                             Clicks[0] = Clicks[1];
                             Clicks[1] = obj;
                         }
-
+                        handleMess.Enqueue(HandleFactory(Clicks[0]));
+                        handleMess.Enqueue(HandleFactory(Clicks[1]));
+                        if (handleMess.IsChanged)
+                            handleMesDisplay = new List<HandleMes>(handleMess);
                         foreach (var item in Clicks)
                         {
                             if (item is Device)
@@ -239,6 +250,35 @@ namespace ATS
                 else return false;
             }
             return false;
+        }
+
+
+        HandleMes HandleFactory(object obj)
+        {
+            HandleMes mes = new HandleMes();
+            //if (obj is string)
+            //{
+            //    mes.CBIName = "";
+            //    mes.HandleButton = obj as string;
+            //}
+            //else
+            //{
+            //    if (obj is Signal)
+            //    {
+            //        Signal s = obj as Signal;
+            //        mes.CBIName = s.StationID.ToString();
+            //        mes.HandleButton = s.Name;
+            //    }
+            //    else
+            //    {
+            //        RailSwitch rs = obj as RailSwitch;
+            //        mes.CBIName = rs.StationID.ToString();
+            //        mes.HandleButton = rs.Name;
+            //    }
+            //    mes.ErrorMes1 = "";
+            //    mes.ErrorMes2 = "";
+            //}
+            return mes;
         }
     }
 

@@ -6,18 +6,18 @@ namespace ATS.Model
     using System.ComponentModel.DataAnnotations.Schema;
     using System.Data.Entity.Spatial;
 
-    [Table("plans.selectjiao")]
-    public partial class selectjiao
+    [Table("plans.jiao_1")]
+    public partial class jiao_1
     {
-        public selectjiao()
+        public jiao_1()
         {
-            plan = new HashSet<plan>();
+            plan_1 = new HashSet<plan_1>();
         }
 
         [Key]
         public int JiaoId { get; set; }
 
-        public int PlanId { get; set; }
+        public int? PlanId { get; set; }
 
         [StringLength(45)]
         public string JiaoName { get; set; }
@@ -55,8 +55,6 @@ namespace ATS.Model
         [StringLength(45)]
         public string EndSection2 { get; set; }
 
-        public virtual ICollection<plan> plan { get; set; }
-
-        public virtual planitem planitem { get; set; }
+        public virtual ICollection<plan_1> plan_1 { get; set; }
     }
 }

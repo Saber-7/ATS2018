@@ -40,11 +40,11 @@ namespace ATS
     }
 
     [Serializable]
-    public enum RouteDirection
+    public enum RouteDirection:byte
     {
         [XmlEnum(Name = "DIRDOWN")]
-        DIRDOWN,
+        DIRDOWN=0x55,
         [XmlEnum(Name = "DIRUP")]
-        DIRUP
+        DIRUP=0xaa
     }
 }

@@ -37,11 +37,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="EntityFramework.SqlServer">
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="LiveCharts">
       <HintPath>..\packages\LiveCharts.0.9.7\lib\net45\LiveCharts.dll</HintPath>
@@ -55,20 +56,26 @@
     <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Expression.Interaction.3.0.40218.0\lib\net45\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.QualityTools.Testing.Fakes, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="MySql.Data, Version=6.9.10.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
-      <Private>True</Private>
       <HintPath>..\packages\MySql.Data.6.9.10\lib\net45\MySql.Data.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="MySql.Data.Entity.EF6, Version=6.9.10.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\MySql.Data.Entity.6.9.10\lib\net45\MySql.Data.Entity.EF6.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
+    <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Design" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Expression.Interaction.3.0.40218.0\lib\net45\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -83,9 +90,9 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="ZCToATS, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ZCATSMes, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\ZCToATS.dll</HintPath>
+      <HintPath>bin\Debug\ZCATSMes.dll</HintPath>
     </Reference>
     <Reference Include="线路绘图工具">
       <HintPath>..\..\..\..\..\Desktop\ShenyangQigongjie3\线路绘图工具.exe</HintPath>
@@ -109,25 +116,26 @@
     <Compile Include="Config\ATSSysConfig.cs" />
     <Compile Include="Helpers\CommnadBuilder.cs" />
     <Compile Include="Helpers\Convector.cs" />
+    <Compile Include="Helpers\FixedConQueue.cs" />
     <Compile Include="Helpers\IPConfigure.cs" />
+    <Compile Include="Helpers\Mes4Display\HandleMes.cs" />
+    <Compile Include="Helpers\Mes4Display\TrainMes.cs" />
     <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Helpers\State.cs" />
     <Compile Include="Helpers\Station.cs" />
     <Compile Include="Helpers\StructBytes.cs" />
+    <Compile Include="Helpers\TryBytes.cs" />
     <Compile Include="Helpers\XmlTool.cs" />
     <Compile Include="Interface\IFlash.cs" />
-    <Compile Include="Model\plan.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Model\planitem.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Model\PlanModel.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Model\selectjiao.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="Model\act_plan.cs" />
+    <Compile Include="Model\act_planitem.cs" />
+    <Compile Include="Model\act_selectjiao.cs" />
+    <Compile Include="Model\jiao_1.cs" />
+    <Compile Include="Model\plan.cs" />
+    <Compile Include="Model\planitem.cs" />
+    <Compile Include="Model\PlanModel.cs" />
+    <Compile Include="Model\plan_1.cs" />
+    <Compile Include="Model\selectjiao.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />
     <Compile Include="ViewModel\PlanViewModel.cs" />
     <Compile Include="ViewModel\ViewModelBase.cs" />
@@ -196,8 +204,12 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="Config\ConfigFile\App.config" />
+    <None Include="app.config" />
+    <None Include="Config\ConfigFile\App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Config\ConfigFile\packages.config" />
+    <None Include="packages.config" />
     <None Include="View\packages.config">
       <SubType>Designer</SubType>
     </None>

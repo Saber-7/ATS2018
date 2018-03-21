@@ -78,22 +78,22 @@
                 <ColumnDefinition Width="487*"></ColumnDefinition>
             </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" Grid.ColumnSpan="2">
+            <DataGrid Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" RenderTransformOrigin="0.78,0.427" Grid.ColumnSpan="2" ItemsSource="{Binding TrainMesDsipaly}" AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="当前所处联锁区" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="列车运行等级" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="列车速度" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="目的地号" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="是否计划车" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="列车位置" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="当前所处联锁区" Width="1*"  Binding="{Binding CBIPos}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车运行等级" Width="1*"  Binding="{Binding RunMode}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车速度" Width="1*"  Binding="{Binding Speed}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="目的地号" Width="1*"  Binding="{Binding Destnation}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="是否计划车" Width="1*"  Binding="{Binding IsPlanTrain}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="列车位置" Width="1*"  Binding="{Binding TrainPos}"></DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
-            <DataGrid Grid.Column="2" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <DataGrid Grid.Column="2" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding HandleMesDispaly}" AutoGenerateColumns="False" >
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="联锁分区名" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="操作按钮" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="错误提示1" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
-                    <DataGridTextColumn Header="错误提示2" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="联锁分区名" Width="1*"  Binding="{Binding CBIName}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="操作按钮" Width="1*"  Binding="{Binding HandleButton}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="错误提示1" Width="1*"  Binding="{Binding ErrorMes1}"></DataGridTextColumn>
+                    <DataGridTextColumn Header="错误提示2" Width="1*"  Binding="{Binding ErrorMes2}"></DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
             <!--<GridSplitter Grid.Column="0" Grid.Row="1" BorderThickness="3" BorderBrush="GreenYellow" ShowsPreview="True"></GridSplitter>

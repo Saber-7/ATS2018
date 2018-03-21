@@ -49,8 +49,10 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="车次号" Width="1*"  Binding="{Binding TrainNum}"></DataGridTextColumn>
                         <DataGridTextColumn Header="车组号" Width="1*"  Binding="{Binding TrainGroupNum}"></DataGridTextColumn>
-                        <DataGridTextColumn Header="起点区段" Width="1*"  Binding="{Binding StartSection}"></DataGridTextColumn>
-                        <DataGridTextColumn Header="终点区段" Width="1*"  Binding="{Binding EndSection}"></DataGridTextColumn> 
+                        <DataGridTextColumn Header="起点区段1" Width="1*"  Binding="{Binding StartSection}"></DataGridTextColumn>
+                        <DataGridTextColumn Header="终点区段1" Width="1*"  Binding="{Binding EndSection}"></DataGridTextColumn>
+                        <DataGridTextColumn Header="起点区段2" Width="1*"  Binding="{Binding StartSection2}"></DataGridTextColumn>
+                        <DataGridTextColumn Header="终点区段2" Width="1*"  Binding="{Binding EndSection2}"></DataGridTextColumn>
                         <DataGridTextColumn Header="运行方向" Width="1*" Binding="{Binding Dir}" > </DataGridTextColumn>
                         <DataGridTextColumn Header="折返轨" Width="1*" Binding="{Binding ReturnMode}"></DataGridTextColumn>
                         <DataGridTextColumn Header="运行模式" Width="1*" Binding="{Binding RunMode}"></DataGridTextColumn>

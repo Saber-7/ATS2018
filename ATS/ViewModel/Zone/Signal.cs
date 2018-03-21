@@ -111,8 +111,6 @@ namespace ATS
 
         public bool FlashNameFlag { get; set; }
 
-        bool isFailed_;
-        public bool IsFailed { get { return isFailed_; } }
 
         protected override void OnRender(DrawingContext dc)
         {
