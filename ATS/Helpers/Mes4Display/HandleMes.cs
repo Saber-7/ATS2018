@@ -53,7 +53,7 @@ namespace ATS
         // override object.GetHashCode
         public override int GetHashCode()
         {
-            return CBIName.GetHashCode();
+            return 0;
         }
     }
 }

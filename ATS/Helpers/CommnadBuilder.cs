@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using 线路绘图工具;
 using System.Collections.Concurrent;
 using System.Windows.Controls;
+using ATS;
 
 namespace ATS
 {
@@ -20,27 +21,28 @@ namespace ATS
             Routes = routes;
         }
 
-        public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes, FixedConQueue<HandleMes> handleMess,List<HandleMes> handleMesDisplay)
+        //public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes, FixedConQueue<HandleMes> handleMess,List<HandleMes> handleMesDisplay)
+        //{
+        //    this.CBIMes = CBIMes;
+        //    Routes = routes;
+        //    this.handleMess=handleMess;
+        //    this.handleMesDisplay = handleMesDisplay;
+        //}
+        public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes,UpdateMesHandle UpdateMesEvent)
         {
             this.CBIMes = CBIMes;
             Routes = routes;
-            this.handleMess=handleMess;
-            this.handleMesDisplay = handleMesDisplay;
-        }
-        public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes,List<Signal> FlashSignals)
-        {
-            this.CBIMes = CBIMes;
-            Routes = routes;
-            this.FlashSignals = FlashSignals;
+            handleMess = new FixedConQueue<HandleMes>(50);
+            this.UpdateMesEvent = UpdateMesEvent;
         }
 
         BlockingCollection<byte[]> CBIMes;
         List<ATSRoute> Routes;
         List<Signal> FlashSignals=new List<Signal>();
         FixedConQueue<HandleMes> handleMess;
-        List<HandleMes> handleMesDisplay;
         readonly int Max_Wait_Seconds = 20;
-
+        event UpdateMesHandle UpdateMesEvent;
+        readonly object lockobj = new object();
 
         int wait_seconds = 0;
 
@@ -104,8 +106,8 @@ namespace ATS
                 SerilizePackage(Clicks);
             }
             else
-            { 
-            
+            {
+                BuildHandleMes(Clicks, true);
             }
 
         }
@@ -166,10 +168,7 @@ namespace ATS
                             Clicks[0] = Clicks[1];
                             Clicks[1] = obj;
                         }
-                        handleMess.Enqueue(HandleFactory(Clicks[0]));
-                        handleMess.Enqueue(HandleFactory(Clicks[1]));
-                        if (handleMess.IsChanged)
-                            handleMesDisplay = new List<HandleMes>(handleMess);
+                        BuildHandleMes(Clicks);
                         foreach (var item in Clicks)
                         {
                             if (item is Device)
@@ -183,6 +182,8 @@ namespace ATS
                         atsCommand.DeviceQueue = new byte[8];
 
                         int k = 0;
+
+
                         foreach (var item in Clicks)
                         {
 
@@ -190,7 +191,7 @@ namespace ATS
                             {
                                 atsCommand.DeviceQueue[k] = (byte)(Clicks[k / 2] as Device).ID;
                                 k++;
-                                if (Clicks[k / 2] is Signal)
+                                    if (Clicks[k / 2] is Signal)
                                     atsCommand.DeviceQueue[k] = (byte)命令类型.列车按钮;
                                 else if (Clicks[k / 2] is RailSwitch)
                                     atsCommand.DeviceQueue[k] = (byte)命令类型.道岔按钮;
@@ -198,7 +199,7 @@ namespace ATS
                                     atsCommand.DeviceQueue[k] = (byte)命令类型.区段按钮;
                                 k++;
                             }
-                            else if (Clicks[k / 2] is string || Clicks[k / 2] is String)
+                            else if (Clicks[k / 2] is string)
                             {
                                 string s = Clicks[k / 2].ToString();
                                 foreach (byte bt in Enum.GetValues(typeof(功能按钮)))
@@ -211,6 +212,12 @@ namespace ATS
                                 }
                                 atsCommand.DeviceQueue[k++] = (byte)命令类型.功能按钮;
                             }
+                        }
+                        if (Clicks.Count>1&&(Clicks[0] as string =="解封"||Clicks[0] as string=="封锁")&&Clicks[1] is RailSwitch)
+                        {
+                            RailSwitch rs = Clicks[1] as RailSwitch;
+                            atsCommand.DeviceQueue[2] = (byte)rs.SectionID;
+                            atsCommand.DeviceQueue[3] = (byte)命令类型.区段按钮;
                         }
                         byte[] bytes = pacTool.Serialize(atsCommand);
                         bool IsAdd = false;
@@ -256,29 +263,88 @@ namespace ATS
         HandleMes HandleFactory(object obj)
         {
             HandleMes mes = new HandleMes();
-            //if (obj is string)
-            //{
-            //    mes.CBIName = "";
-            //    mes.HandleButton = obj as string;
-            //}
-            //else
-            //{
-            //    if (obj is Signal)
-            //    {
-            //        Signal s = obj as Signal;
-            //        mes.CBIName = s.StationID.ToString();
-            //        mes.HandleButton = s.Name;
-            //    }
-            //    else
-            //    {
-            //        RailSwitch rs = obj as RailSwitch;
-            //        mes.CBIName = rs.StationID.ToString();
-            //        mes.HandleButton = rs.Name;
-            //    }
-            //    mes.ErrorMes1 = "";
-            //    mes.ErrorMes2 = "";
-            //}
+            if (obj is string)
+            {
+                mes.CBIName = "";
+                mes.HandleButton = obj as string;
+            }
+            else
+            {
+                if (obj is Signal)
+                {
+                    Signal s = obj as Signal;
+                    mes.CBIName = s==null?null:s.StationID.ToString();
+                    mes.HandleButton = s == null ? null:s.Name;
+                }
+                else
+                {
+                    RailSwitch rs = obj as RailSwitch;
+                    mes.CBIName = rs==null?null:rs.StationID.ToString();
+                    mes.HandleButton = rs == null ? null:rs.Name;
+                }
+                mes.ErrorMes1 = "";
+                mes.ErrorMes2 = "";
+            }
             return mes;
+        }
+        HandleMes HandleFactory(object obj,bool IsError)
+        {
+            HandleMes mes = new HandleMes();
+            if (obj is string)
+            {
+                mes.CBIName = "";
+                mes.HandleButton = obj as string;
+            }
+            else
+            {
+                if (obj is Signal)
+                {
+                    Signal s = obj as Signal;
+                    mes.CBIName = s == null ? null : s.StationID.ToString();
+                    mes.HandleButton = s== null ? null : s.Name;
+                }
+                else
+                {
+                    RailSwitch rs = obj as RailSwitch;
+                    mes.CBIName = rs == null ? null : rs.StationID.ToString();
+                    mes.HandleButton = rs == null ? null : rs.Name;
+                }
+                if(IsError)
+                {
+                    mes.ErrorMes1 = "Error";
+                    mes.ErrorMes2 = "Error";
+                }
+
+            }
+            return mes;
+        }
+
+        void  BuildHandleMes(List<object> MesList)
+        {
+            lock(lockobj){
+                foreach (var mes in MesList)
+                {
+                    handleMess.Enqueue(HandleFactory(mes));
+                    if (handleMess.IsChanged) UpdateMesEvent(handleMess);
+                }
+            }
+
+        }
+        void BuildHandleMes(List<object> MesList,bool IsError)
+        {
+            lock(locker)
+            {
+                if (IsError)
+                {
+                    foreach (var mes in MesList)
+                    {
+                        handleMess.Enqueue(HandleFactory(mes, IsError));
+                        if (handleMess.IsChanged) UpdateMesEvent(handleMess);
+                    }
+                }
+            }
+
+
         }
     }
 

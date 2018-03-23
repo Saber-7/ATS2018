@@ -26,7 +26,7 @@
                 <RowDefinition Height="25"></RowDefinition>
             </Grid.RowDefinitions>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Name="MainScroll" Grid.Column="0">
-                <Canvas Name="MainCanvas" Background="Black" Width="7680" Height="1080" Grid.Row="0" MouseDown="MainCanvas_MouseDown" MouseMove="MainCanvas_MouseMove" MouseUp="MainCanvas_MouseUp" >
+                <Canvas Name="MainCanvas" Background="Black" Width="7680" Height="1080" Grid.Row="0" MouseMove="MainCanvas_MouseMove" MouseLeftButtonDown="MainCanvas_MouseDown" MouseLeftButtonUp="MainCanvas_MouseUp" >
                     <i:Interaction.Triggers>
                         <i:EventTrigger EventName="MouseLeftButtonDown">
                             <i:InvokeCommandAction Command="{Binding CmdMouseLeftButtonDown}" />

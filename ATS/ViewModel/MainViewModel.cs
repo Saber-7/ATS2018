@@ -43,10 +43,12 @@ namespace ATS
         CBTC模式,
         点式ATP模式
     }
-    
+
+    delegate void UpdateMesHandle(FixedConQueue<HandleMes> fixqueue);
     public class MainViewModel:ViewModelBase
     {
         private  static readonly ILog Log4ATS=log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         public MainViewModel(Canvas canvas)
         {
             InitCommand();
@@ -62,8 +64,9 @@ namespace ATS
 
 
             ClassifyElements();
-            manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMess, hanldeMesDispaly);
-            autoCB = new CommandBuilder(CBIMesSend, RC.Routes,HandleMess,hanldeMesDispaly);
+            UpdateMesHandle UpdateHandleMesEvent = new UpdateMesHandle(UpdateHandleMes);
+            manualCB = new CommandBuilder(CBIMesSend, RC.Routes,UpdateHandleMesEvent);
+            autoCB = new CommandBuilder(CBIMesSend, RC.Routes, UpdateHandleMesEvent);
             InitThreads();
 
             //EF暖机,解决第一次打开慢的问题
@@ -105,16 +108,20 @@ namespace ATS
 
         //右键内容
         //信号机、区段、道岔
+        //string[][] RightButtonItems ={
+        //              new string[]{"总取消", "总人解", "信号关闭", "信号重开", "封锁", "解封", "引导进路"},
+        //              new string[]{"总定位", "总反位", "单锁", "单解", "封锁", "解封", "强制扳道岔定位", "强制扳道岔反位"},
+        //              new string[]{"封锁", "解封", "区故解"}};
         string[][] RightButtonItems ={
-                      new string[]{"总取消", "总人解", "信号关闭", "信号重开", "封锁", "解封", "引导进路"},
-                      new string[]{"总定位", "总反位", "单锁", "单解", "封锁", "解封", "强制扳道岔定位", "强制扳道岔反位"},
+                      new string[]{"总取消", "总人解", "信号关闭", "信号重开"},
+                      new string[]{"总定位", "总反位", "单锁", "单解", "封锁", "解封"},
                       new string[]{"封锁", "解封", "区故解"}};
 
 
         /// <summary>
         /// 确认间隔 只对开进路确认
         /// </summary>
-        readonly private  int ConfirmInterval=5000;
+        readonly private  int ConfirmInterval=6000;
 
         //反复确认次数只对开进路确认
         readonly private int ConfirmTimes = 2;
@@ -263,7 +270,6 @@ namespace ATS
             }
         }
 
-        DateTime dt = DateTime.MinValue.Add(DateTime.Now-DateTime.Today);
 
 
         UInt16 NowJiao;
@@ -499,6 +505,7 @@ namespace ATS
             }
         }
 
+        DateTime dt = DateTime.Now;
         void UpdateCountDown()
         {
             foreach (var item in ATPsMes.GetConsumingEnumerable())
@@ -516,14 +523,14 @@ namespace ATS
                 {
                     if (Section2StationName.ContainsKey(curName))
                     {
-                        dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
+                        //dt = DateTime.Now.Date.Add(DateTime.Now - DateTime.Today);
                         int nln = t.NowLineNum;
                         int pln = t.PlanLineNum;
                         string s = Section2StationName[curName];
                         dis = (from p in StaNamesDict
                                where p.Value == s
                                select p.Key).ToList();
-                        SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
+                        SelectCollection[nln].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
                         isInSta = true;
                         if (t != null && SList != null)
                         {
@@ -544,7 +551,7 @@ namespace ATS
 
                             if (pts != null)
                             {
-                                DateTime pdt = DateTime.MinValue.Add((TimeSpan)pts);
+                                DateTime pdt = DateTime.Today.Add((TimeSpan)pts);
                                 //TimeSpan ctt = DateTime.Now - pdt;
                                 //cts caculate timespan
                                 TimeSpan cts = DateTime.Now.TimeOfDay-pdt.TimeOfDay;
@@ -570,9 +577,8 @@ namespace ATS
                     }
                     else if (isInSta)
                     {
-                        dt = DateTime.MinValue.Add(DateTime.Now - DateTime.Today);
                         int nln = t.NowLineNum;
-                        SelectCollection[nln].Values.Add(new DateTimePoint(dt, dis.FirstOrDefault()));
+                        SelectCollection[nln].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
                         isInSta = false;
                     }
                 }
@@ -775,7 +781,7 @@ namespace ATS
 
         void InitDisFormatter()
         {
-              XFormatter = val => new DateTime((long)val).ToString("HH:mm:ss");
+              XFormatter = val => new DateTime((long)val).ToString("yyyy HH:mm:ss");
               YFormatter = (double x) => StaNamesDict.ContainsKey(x) ? StaNamesDict[x] :null ;
         }
 
@@ -814,14 +820,14 @@ namespace ATS
         List<DateTimePoint> Plan2Point(selectjiao sj)
         {
             List<DateTimePoint> dpl = new List<DateTimePoint>();
-            DateTime min = DateTime.MinValue;
+            //DateTime min = DateTime.MinValue;
             List<plan> pl = sj.plan.ToList();
             for (int i = 0; i < pl.Count; i++)
             {
                 if (i > 0)
-                    dpl.Add(new DateTimePoint(min.Add(pl[i].ReachTime.Value), Convert.ToDouble(pl[i].Distance)));
+                    dpl.Add(new DateTimePoint(DateTime.Today.Add(pl[i].ReachTime.Value), Convert.ToDouble(pl[i].Distance)));
                 if (i < pl.Count - 1)
-                    dpl.Add(new DateTimePoint(min.Add(pl[i].LeaveTime.Value), Convert.ToDouble(pl[i].Distance)));
+                    dpl.Add(new DateTimePoint(DateTime.Today.Add(pl[i].LeaveTime.Value), Convert.ToDouble(pl[i].Distance)));
             }
             return dpl;
         }
@@ -829,9 +835,16 @@ namespace ATS
         object temp = new object();
         //显示集合
         private SeriesCollection _selectCollection;
+        private SeriesCollection _AdjustCollection;
         public SeriesCollection SelectCollection
         {
-            get { lock(temp) return _selectCollection; }
+            get {
+                lock (temp)
+                {
+                    return _AdjustCollection;
+                    //return null;
+                }
+            }
             set
             {
                 lock (temp)
@@ -839,12 +852,55 @@ namespace ATS
                     if (value != _selectCollection)
                     {
                         _selectCollection = value;
+                        _AdjustCollection = AdjustTime(_selectCollection);
                         RaisePropertyChanged("SelectCollection");
                     }
                 }
             }
         }
 
+        //时间放大比例尺
+        double timek = 10;
+        ///产生一个特定时间跨度的集合
+        LiveCharts.SeriesCollection AdjustTime(SeriesCollection sc)
+        {
+            SeriesCollection res=new SeriesCollection();
+            if (sc == null)
+                return null;
+            else
+            {
+                for(int i = 0; i < sc.Count; i++)
+                {
+                
+                    res.Add(new LineSeries()
+                    {
+                        Title = sc[i].Title,
+                        LineSmoothness = 0,
+                        Values = new ChartValues<DateTimePoint>(),
+                        Fill = new SolidColorBrush()
+                    });
+                    for(int j=0;j<sc[i].Values.Count;j++)
+                    {
+                        if (j == 0)
+                        {
+                            DateTimePoint point = sc[i].Values[j] as DateTimePoint;
+                            if(point!=null)
+                            res[i].Values.Add(new DateTimePoint((point.DateTime),point.Value));
+                        }
+                        else
+                        {
+                            DateTimePoint point1 = sc[i].Values[j] as DateTimePoint,
+                            point2 = sc[i].Values[j - 1] as DateTimePoint;
+                            TimeSpan ts = point2.DateTime - point1.DateTime;
+                            ts = new TimeSpan(Convert.ToInt64(ts.Milliseconds * timek));
+                            res[i].Values.Add(new DateTimePoint((point2.DateTime.Add(ts)), point2.Value));
+                        }
+
+                    }
+                }
+                return res;
+            }
+        }
 
         /// <summary>
         /// 显示集合构建
@@ -1016,9 +1072,9 @@ namespace ATS
             {
                 RailSwitch t = (RailSwitch)De;
                 cms[1].PlacementTarget = t;
-                cms[1].IsOpen=true;
+                cms[1].IsOpen = true;
             }
-            else if(De is Section)
+            else if (De is Section)
             {
                 Section t = (Section)De;
                 cms[2].PlacementTarget = t;
@@ -1082,6 +1138,10 @@ namespace ATS
             stationElements_ = StationElements.Open(path);
             stationElements_.CheckSectionSwitches();
             stationElements_.AddElementsToCanvas(MCanvas);
+            foreach (var item in stationElements_.Elements)
+            {
+                item.RightButtonMenu.Items.Clear();
+            }
         }
 
         private void LoadStationTopo(string path = @"ConfigFiles\StationTopoloty.xml")
@@ -1318,7 +1378,7 @@ namespace ATS
         void InitMes(int TrainMesNum=6,int HandleMesNUm=6)
         {
             trainMess = new FixedConQueue<TrainMes>(TrainMesNum);
-            handleMess = new FixedConQueue<HandleMes>(HandleMesNUm);
+
         }
 
         public FixedConQueue<TrainMes> trainMess;
@@ -1344,25 +1404,22 @@ namespace ATS
             }
         }
 
-        private FixedConQueue<HandleMes> handleMess;
-        public FixedConQueue<HandleMes> HandleMess {
-            get { return handleMess; }
-            set
-            {
-                handleMess = value;
-                RaisePropertyChanged("HandleMess");
-            }
+        public void UpdateHandleMes(FixedConQueue<HandleMes> fixqueue)
+        {
+            HandleMesDispaly = new List<HandleMes>(fixqueue);
         }
 
-        private List<HandleMes> hanldeMesDispaly;
+        private List<HandleMes> handleMesdipaly;
         public List<HandleMes> HandleMesDispaly
         {
-            get { return hanldeMesDispaly;}
+            get { return handleMesdipaly;}
             set{
-                hanldeMesDispaly = value;
+                handleMesdipaly = value;
                 RaisePropertyChanged("HandleMesDispaly");
             }
         }
+
+
 
         TrainMes TrainMesFactory(GraphicElement ge,ZC2ATS info)
         {
@@ -1370,22 +1427,14 @@ namespace ATS
             if (ge is Section)
             {
                 Section sc = ge as Section;
-                mes.CBIPos = sc==null?null:sc.StationID.ToString();
-
+                mes.CBIPos = Convert.ToString(sc.StationID);
             }
-            else
+            else if(ge is RailSwitch)
             {
                 RailSwitch rs = ge as RailSwitch;
-                mes.CBIPos = rs==null?null:rs.StationID.ToString();
+                mes.CBIPos =Convert.ToString(rs.StationID);
             }
-            try
-            {
-                mes.RunMode = ((ActualRunMode)(info.Runmode)).ToString();
-            }
-            catch
-            {
-                mes.RunMode = ActualRunMode.EUM.ToString();
-            }
+            mes.RunMode = Convert.ToString((ActualRunMode)(info.Runmode));
             mes.Speed = info.Speed.ToString()+"km/h";
             GraphicElement MASection=null;
             App.Current.Dispatcher.Invoke(() =>
@@ -1406,12 +1455,23 @@ namespace ATS
                     {
                         return false;
                     }
-                });
+                }); 
             });
             if (MASection != null)
-                mes.Destnation = MASection.Name;
+            {
+                if (MASection is RailSwitch)
+                {
+                    RailSwitch rs = MASection as RailSwitch;
+                    mes.Destnation = rs.SectionName;
+                }
+                else
+                {
+                    mes.Destnation = MASection.Name;
+                }
+            }
+
             else mes.Destnation = null;
-            mes.IsPlanTrain = "否";
+            mes.IsPlanTrain = "是";
             mes.TrainPos = ge==null?"无":ge.Name + " " + info.Offset.ToString()+"m";
             return mes;
         }
@@ -1425,4 +1485,5 @@ namespace ATS
         EUM=4
 
     }
+
 }
