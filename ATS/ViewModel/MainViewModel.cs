@@ -34,7 +34,7 @@ using log4net.Config;
 using System.Configuration;
 using System.Collections.Specialized;
 using System.Windows.Documents;
-
+using System.Linq;
 
 namespace ATS
 {
@@ -65,21 +65,21 @@ namespace ATS
 
             ClassifyElements();
             UpdateMesHandle UpdateHandleMesEvent = new UpdateMesHandle(UpdateHandleMes);
-            manualCB = new CommandBuilder(CBIMesSend, RC.Routes,UpdateHandleMesEvent);
-            autoCB = new CommandBuilder(CBIMesSend, RC.Routes, UpdateHandleMesEvent);
+            manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
+            autoCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
             InitThreads();
 
             //EF暖机,解决第一次打开慢的问题
-            Task.Run(() =>
-                {
-                    using (var pm=new PlanModel())
-                    {
-                        var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
-                        var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
-                        mappingCollection.GenerateViews(new List<EdmSchemaError>());
-                    }
-                }
-                );
+            //Task.Run(() =>
+            //    {
+            //        using (var pm=new PlanModel())
+            //        {
+            //            var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
+            //            var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+            //            mappingCollection.GenerateViews(new List<EdmSchemaError>());
+            //        }
+            //    }
+            //    );
             InitTrain();
             Log4ATS.Info("开始测试");
         }
@@ -321,12 +321,15 @@ namespace ATS
                 if (ZC2ATSinfo != null)
                 {
                     Log4ATS.Info(ZC2ATSinfo.PositionId + "++++" + ZC2ATSinfo.PositionType+"  "+ZC2ATSinfo.Offset);
+
                     App.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         Train t = Trains.Find((Train tt) =>
                         {
                             return tt.TrainNum == ZC2ATSinfo.TrainId;
                         });
+                        t.RunMode = (ActualRunMode)ZC2ATSinfo.Runmode;
+                        t.IsEmergent = ZC2ATSinfo.IsEmergent;
                         object locker = new object();
                         //激活车
                         if (!t.IsRegistered)
@@ -365,9 +368,9 @@ namespace ATS
                         //摆车位
                         GraphicElement nowElement = t.UPdateTrainPosByOffset(ZC2ATSinfo.PositionType, ZC2ATSinfo.PositionId, ZC2ATSinfo.Direction, ZC2ATSinfo.Offset);
                         TrainMes mes = TrainMesFactory(nowElement, ZC2ATSinfo);
-                        TrainMess.Enqueue(mes);
-                        if (trainMess.IsChanged)
-                            TrainMesDsipaly = new List<TrainMes>(trainMess);
+                        TrainMesQueue.Enqueue(mes);
+                        if (trainMesQueue.IsChanged)
+                            TrainMesDsipaly = new List<TrainMes>(trainMesQueue);
 
                         if (t.Res != null && t.Res.Count != 0)
                         {
@@ -385,11 +388,11 @@ namespace ATS
                                 }
                             }
                             ////车注销
-                            //if (info.IsQuit)
-                            //{
-                            //    MCanvas.Children.Remove(t);
-                            //    t.IsRegistered = false;
-                            //}
+                            if (ZC2ATSinfo.Runmode==(byte)ActualRunMode.注销)
+                            {
+                                MCanvas.Children.Remove(t);
+                                t.IsRegistered = false;
+                            }
                         }
 
 
@@ -402,18 +405,18 @@ namespace ATS
 
 
         /// <summary>
-        /// 更新光带和信号机
+        /// 更新光带和信号机,以及联锁信息显示
         /// </summary>
         void UpdateBandSignal()
         {
-            foreach (byte[] tempbytes in CBIMesRec.GetConsumingEnumerable())
+            foreach (byte[] recvBuf in CBIMesRec.GetConsumingEnumerable())
             {
                 try
                 {
                     App.Current.Dispatcher.BeginInvoke(new Action(
                     () =>
                     {
-                        int CBINum = tempbytes[0];
+                        int CBINum = recvBuf[0];
                         //设备起始号码
                         int sRs = 0, sSec = 0, sSig = 0;
                         for (int i = 0; i < CBINum; i++)
@@ -426,7 +429,7 @@ namespace ATS
                         {
                             int Id = sSec + i;
                             Sections[Id].SetStartByte(i);
-                            Sections[Id].UpdateStatus(tempbytes, 0);
+                            Sections[Id].UpdateStatus(recvBuf, 0);
                             if (Sections[Id].IsStatusChanged)
                             {
                                 Sections[Id].InvalidateVisual();
@@ -437,7 +440,7 @@ namespace ATS
                         {
                             int Id = sRs + i;
                             RailSwitches[Id].SetStartByte(i, RSStartSections[CBINum]);
-                            RailSwitches[Id].UpdateStatus(tempbytes, 0);
+                            RailSwitches[Id].UpdateStatus(recvBuf, 0);
                             if (RailSwitches[Id].IsStatusChanged)
                             {
                                 RailSwitches[Id].InvalidateVisual();
@@ -449,10 +452,27 @@ namespace ATS
                         {
                             int Id = sSig + i;
                             Signals[Id].SetStartByte(i);
-                            Signals[Id].UpdateStatus(tempbytes, 0);
+                            Signals[Id].UpdateStatus(recvBuf, 0);
                             if (Signals[Id].IsStatusChanged)
                                 Signals[Id].InvalidateVisual();
                         }
+
+
+                    const int helpTipFlag = 1134 + 128; // 默认
+                    if (recvBuf[helpTipFlag] != 0 && recvBuf[helpTipFlag] != 0xff)
+                    {
+                        int strLen = 0;
+                        while (recvBuf[helpTipFlag + strLen] != 0)
+                        {
+                            strLen++;
+                        }
+                       string CIReply = System.Text.Encoding.Default.GetString(recvBuf, helpTipFlag, strLen);
+                       HandleMes handleMes = CBIerrorFactory(CIReply);
+                       HandleMesQueue.Enqueue(handleMes);
+                        //wpf不能绑定queue 只能绑定list等少数集合故强行转一下
+                        handleMesdipaly = new List<HandleMes>(HandleMesQueue);
+                    }
+                        if(ShouldOpenRouteOrNot())
                         OpenFirstRoute();
                     }));
                 }
@@ -483,6 +503,7 @@ namespace ATS
                 if (ge is Section && ge.Name == "ZHG2") return true;
                 else return false;
             }) as Section;
+
             if (ZHG1 != null && ZHG1.IsOccupied)
             {
                 Route route = RC.Routes.Find((ATSRoute ar) =>
@@ -503,6 +524,31 @@ namespace ATS
                 autoCB.AddDevice(route.StartSignal);
                 autoCB.AddDevice(route.EndSignal);
             }
+        }
+
+
+        int permitTime = 1;
+        /// <summary>
+        /// 判定是否是合适的开车时间
+        /// </summary>
+        /// <returns></returns>
+        /// 
+        bool ShouldOpenRouteOrNot()
+        {
+            TimeSpan TimeToLeave = new TimeSpan(0, permitTime, 0);
+            for (int i = 0; i < PlanNum; i++)
+            {
+              TimeSpan? t =SList[i].plan.First().LeaveTime;
+              if (t != null)
+              {
+                  TimeSpan ts = (TimeSpan)t;
+                  TimeSpan curts= DateTime.Now - DateTime.Today.Add(ts);
+                  if (curts <= TimeToLeave)
+                      return true;
+              }
+            }
+            return false;
+
         }
 
         DateTime dt = DateTime.Now;
@@ -628,23 +674,40 @@ namespace ATS
         byte[] preBytes=new byte[24];
         void SendMesToCBI()
         {
-            foreach (var bytes in CBIMesSend.GetConsumingEnumerable())
+            foreach (var curbytes in CBIMesSend.GetConsumingEnumerable())
             {
-                if (!bytes.SequenceEqual(preBytes))
+                if (!curbytes.SequenceEqual(preBytes))
                 {
-                    foreach (var ep in CBIsCom.REPs)
+                    if (curbytes[13]==(byte)(命令类型.功能按钮)&&(curbytes[12] == (byte)功能按钮.总人解 || curbytes[12] == (byte)功能按钮.总取消))
                     {
-                        CBIsCom.SendData(bytes, ep, bytes.Length);
-                        Log4ATS.Info(bytes[12]+"  "+bytes[14]+ "---" + ep);
-                    }
-                    if(bytes[13]==1&&bytes[15]==1)
                         lock (lockobj)
                         {
-                            Confirmbytes.Add(new TryBytes(bytes,ConfirmTimes));
+                            List<TryBytes> rmBytes = Confirmbytes.FindAll((TryBytes trybytes) =>
+                            {
+                                byte[] bytes = trybytes.bytes;
+                                //信号机相同
+                                return bytes[12] == curbytes[14] && bytes[13] == bytes[15] && bytes[13] == (byte)命令类型.列车按钮;
+                            });
+                            for(int i = 0; i < rmBytes.Count; i++)
+                            {
+                                Confirmbytes.Remove(rmBytes[i]);
+                            }
                         }
-                    Array.Copy(bytes, preBytes, bytes.Length);
+                        
+                    }
+
+                    foreach (var ep in CBIsCom.REPs)
+                    {
+                        CBIsCom.SendData(curbytes, ep, curbytes.Length);
+                        Log4ATS.Info(curbytes[12]+"  "+curbytes[14]+ "---" + ep);
+                    }
+                    if(curbytes[13]==1&&curbytes[15]==1)
+                        lock (lockobj)
+                        {
+                            Confirmbytes.Add(new TryBytes(curbytes,ConfirmTimes));
+                        }
+                    Array.Copy(curbytes, preBytes, curbytes.Length);
                 }
-                //Thread.Sleep(1000);
             }
         }
 
@@ -676,7 +739,7 @@ namespace ATS
                             {
                                 byte[] bytes = Confirmbytes[i].bytes;
                                 CBIsCom.SendData(bytes, ep, bytes.Length);
-                                Log4ATS.Info(bytes[12] + "++++" + bytes[14] + "---" + ep);
+                                //Log4ATS.Info(bytes[12] + "++++" + bytes[14] + "---" + ep);
                             }
                             Confirmbytes[i].TryTimeAddOnce();
                             if (Confirmbytes[i].IsTryFinished())
@@ -912,6 +975,7 @@ namespace ATS
             InitDisFormatter();
             NowJiao = 0;
             SelectCollection = new SeriesCollection();
+            PlanNum = sl.Count;
             for (int i = 0; i < sl.Count; i++)
             {
                 SelectCollection.Add(
@@ -929,6 +993,8 @@ namespace ATS
         }
 
         #endregion
+
+        int PlanNum = 0;
 
         #region 命令
 
@@ -1244,9 +1310,11 @@ namespace ATS
                         this.FlashDevice(ge);
                     }
                     manualCB.FlashName();
+                    FlashTrain();
                 }
                 ));
             }
+
 
         }
 
@@ -1266,6 +1334,28 @@ namespace ATS
                     
                     }
                     item.InvalidateVisual();
+                }
+            }
+        }
+
+        void FlashTrain()
+        {
+            foreach (var t in Trains)
+            {
+                if (t.IsEmergent)
+                {
+                    if (t.Visibility == Visibility.Hidden)
+                    {
+                        t.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        t.Visibility = Visibility.Hidden;
+                    }
+                }
+                else
+                {
+                    t.Visibility = Visibility.Visible;
                 }
             }
         }
@@ -1377,16 +1467,17 @@ namespace ATS
 
         void InitMes(int TrainMesNum=6,int HandleMesNUm=6)
         {
-            trainMess = new FixedConQueue<TrainMes>(TrainMesNum);
+            trainMesQueue = new FixedConQueue<TrainMes>(TrainMesNum);
+            HandleMesQueue = new FixedConQueue<HandleMes>(TrainMesNum);
 
         }
 
-        public FixedConQueue<TrainMes> trainMess;
-        public FixedConQueue<TrainMes> TrainMess
+        public FixedConQueue<TrainMes> trainMesQueue;
+        public FixedConQueue<TrainMes> TrainMesQueue
         {
-            get{return trainMess;}
+            get{return trainMesQueue;}
             set{
-                trainMess = value;
+                trainMesQueue = value;
                 RaisePropertyChanged("TrainMess");
                 //TrainMesDsipaly = new List<TrainMes>(trainMess);
             }
@@ -1408,6 +1499,7 @@ namespace ATS
         {
             HandleMesDispaly = new List<HandleMes>(fixqueue);
         }
+        public FixedConQueue<HandleMes> HandleMesQueue { get; set; }
 
         private List<HandleMes> handleMesdipaly;
         public List<HandleMes> HandleMesDispaly
@@ -1421,6 +1513,12 @@ namespace ATS
 
 
 
+        /// <summary>
+        /// zc信息产生工厂
+        /// </summary>
+        /// <param name="ge"></param>
+        /// <param name="info"></param>
+        /// <returns></returns>
         TrainMes TrainMesFactory(GraphicElement ge,ZC2ATS info)
         {
             TrainMes mes = new TrainMes();
@@ -1475,15 +1573,25 @@ namespace ATS
             mes.TrainPos = ge==null?"无":ge.Name + " " + info.Offset.ToString()+"m";
             return mes;
         }
+
+
+        HandleMes CBIerrorFactory(string CBIErrorStr)
+        {
+            HandleMes handleMes = new HandleMes();
+            handleMes.ErrorMes2 = String.Copy(CBIErrorStr);
+            return handleMes;
+        }
     }
 
-    enum ActualRunMode:byte
+    public enum ActualRunMode:byte
     {
         AM=1,
         CM=2,
         RM=3,
-        EUM=4
+        EUM=4,
+        注销=5
 
     }
+
 
 }

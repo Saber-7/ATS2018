@@ -94,8 +94,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\ZCATSMes.dll</HintPath>
     </Reference>
-    <Reference Include="线路绘图工具">
-      <HintPath>..\..\..\..\..\Desktop\ShenyangQigongjie3\线路绘图工具.exe</HintPath>
+    <Reference Include="线路绘图工具, Version=0.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\ConfigFiles\线路绘图工具.exe</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +139,7 @@
     <Compile Include="Model\selectjiao.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />
     <Compile Include="ViewModel\PlanViewModel.cs" />
+    <Compile Include="ViewModel\TrainViewModel.cs" />
     <Compile Include="ViewModel\ViewModelBase.cs" />
     <Compile Include="ViewModel\Zone\ATSRoute.cs" />
     <Compile Include="ViewModel\Zone\ICheckDistance.cs" />

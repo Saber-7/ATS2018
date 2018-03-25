@@ -11,6 +11,8 @@ namespace ATS
 {
     public class StationElements
     {
+        [XmlElement("RelayButton",typeof(RelayButton))]
+        [XmlElement("PSDoor",typeof(PSDoor))]
         [XmlElement("Section", typeof(Section))]
         [XmlElement("RailSwitch", typeof(RailSwitch))]
         [XmlElement("Signal", typeof(Signal))]

@@ -72,6 +72,7 @@ namespace ATS
             DataContext = this;
             //com.ListenControlData();
             Points = PointList[1];
+            RecPoints = Rectangle;
             Elements = eles;
             Routes = routes;
             TrainNum = num;
@@ -100,13 +101,13 @@ namespace ATS
         public int PointOrderNum{ get; set; }
 
         //存储之前的状态
-        bool _isTop = false;
+        //bool _isTop = false;
 
-        public bool IsStop
-        {
-            get { return _isTop; }
-            set { _isTop = value; }
-        }
+        //public bool IsStop
+        //{
+        //    get { return _isTop; }
+        //    set { _isTop = value; }
+        //}
 
         #region 外观
 
@@ -154,29 +155,56 @@ namespace ATS
                 }
         }
 
-       Brush _TrainColor=Brushes.YellowGreen;
+       Brush _RecColor = Brushes.Green;
 
-        public Brush TrainColor
+        public Brush RecColor
         {
-            get { return _TrainColor; }
-            set { _TrainColor = value; }
+            get { return _RecColor; }
+            set {
+                if(_RecColor!=value)
+                {
+                    _RecColor = value;
+                    RaisePropertyChanged("RecColor");
+                }
+
+            }
         }
 
-        #endregion 
+        private Brush _arrowColor = Brushes.Green;
+
+        public Brush ArrowColor
+        {
+            get
+            {
+                return _arrowColor;
+            }
+
+            set
+            {
+                if(_arrowColor!=value)
+                {
+                    _arrowColor = value;
+                    RaisePropertyChanged("ArrowColor");
+                }
+
+            }
+        }
+        #endregion
 
         #region 运行参数
 
-        RunMode _runMode=RunMode.CBTC模式;
+        ActualRunMode _runMode;
 
-        public RunMode RunMode
+        public ActualRunMode RunMode
         {
             get { return _runMode; }
             set {
                 if (value != _runMode)
                 {
                     _runMode = value;
-                    if (_runMode == RunMode.CBTC模式) TrainColor = Brushes.YellowGreen;
-                    else TrainColor = Brushes.Purple;
+                    int order = (byte)(_runMode);
+                    if (order >= 0 && order <= RectangleColors.Count)
+                    RecColor = RectangleColors[order];
                 }
             }
         }
@@ -264,8 +292,9 @@ namespace ATS
                 if (value != _dir)
                 {
                     _dir = value;
-                    if (_dir == 85) Points = PointList[0];
-                    else Points =PointList[1];
+                    if (_dir == 85) ArrowPoints = RightArrow;
+                    else if (_dir == 170) ArrowPoints = LeftArrow;
+                    else ArrowPoints = null;
 
                 } 
             }
@@ -1087,6 +1116,109 @@ namespace ATS
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+
+
+
+
+        PointCollection _RecPoints, _ArrowPoints;
+
+        public PointCollection RecPoints
+        {
+            get
+            {
+                return _RecPoints;
+            }
+
+            set
+            {
+                if (_RecPoints != value)
+                {
+                    _RecPoints = value;
+                    RaisePropertyChanged("RecPoints");
+                }
+            }
+        }
+
+        public PointCollection ArrowPoints
+        {
+            get
+            {
+                return _ArrowPoints;
+            }
+
+            set
+            {
+                if (_ArrowPoints != value)
+                {
+                    _ArrowPoints = value;
+                    RaisePropertyChanged("ArrowPoints");
+                }
+
+            }
+        }
+
+
+        #region 列车外观相关静态内容
+
+        readonly PointCollection Rectangle = new PointCollection
+        {
+            new Point(-20,-7),new Point(-20,7),new Point(20,7),new Point(20,-7)
+        };
+
+        readonly PointCollection LeftArrow = new PointCollection
+        {
+            new Point(-27,0),new Point(-20,-7),new Point(-20,7)
+        };
+
+        readonly PointCollection RightArrow = new PointCollection
+        {
+            new Point(27,0),new Point(20,-7),new Point(20,7)
+        };
+
+        readonly List<Brush> RectangleColors = new List<Brush>()
+        {
+            new SolidColorBrush(Colors.Black),
+            new SolidColorBrush(Colors.Green),
+            new SolidColorBrush(Colors.Orange),
+            new SolidColorBrush(Colors.Gray),
+            new SolidColorBrush(Colors.White),
+            new SolidColorBrush(Colors.Yellow),
+            new SolidColorBrush(Colors.Red)
+        };
+
+        readonly List<Brush> ArrowColors = new List<Brush>()
+        {
+            new SolidColorBrush(Colors.Black),
+            new SolidColorBrush(Colors.Blue),
+            new SolidColorBrush(Colors.Yellow),
+            new SolidColorBrush(Colors.Red),
+            new SolidColorBrush(Colors.White),
+        };
+        bool _IsEmergent=false;
+
+        readonly private Object lockobj = new object();
+        public bool IsEmergent
+        {
+            get
+            {
+                lock(lockobj)
+                return _IsEmergent;
+            }
+
+            set
+            {
+                lock(lockobj)
+                _IsEmergent = value;
+            }
+        }
+
+
+
+
+
+
+
+        #endregion
     }
 
     /// <summary>

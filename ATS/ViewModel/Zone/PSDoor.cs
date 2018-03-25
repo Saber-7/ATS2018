@@ -11,6 +11,15 @@ namespace ATS
 
         public bool IsStatusChanged { get; set; }
 
+        public PSDoor()
+        {
+            //isDisconnected_ = true;
+            //IsOccupied = true;
+
+            isDisconnected_ = false;
+            IsOccupied = false;
+
+        }
         //public bool IsFailed { get; }
 
         int startByte_;
@@ -48,6 +57,7 @@ namespace ATS
 
         public void SetCommandMenu()
         {
+
         }
 
         public void SetStartByte(int ID)
@@ -79,5 +89,7 @@ namespace ATS
                 (graphics_[1] as Line).OnRender(dc, DefaultPen_);
             }
         }
+
+
     }
 }

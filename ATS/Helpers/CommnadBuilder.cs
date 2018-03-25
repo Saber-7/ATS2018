@@ -32,14 +32,21 @@ namespace ATS
         {
             this.CBIMes = CBIMes;
             Routes = routes;
-            handleMess = new FixedConQueue<HandleMes>(50);
+            HandeMesQueue = new FixedConQueue<HandleMes>(50);
             this.UpdateMesEvent = UpdateMesEvent;
         }
 
+        public CommandBuilder(BlockingCollection<byte[]> CBIMes, List<ATSRoute> routes, FixedConQueue<HandleMes> handleMesqueue,UpdateMesHandle UpdateMesEvent)
+        {
+            this.CBIMes = CBIMes;
+            Routes = routes;
+            HandeMesQueue = handleMesqueue;
+            this.UpdateMesEvent = UpdateMesEvent;
+        }
         BlockingCollection<byte[]> CBIMes;
         List<ATSRoute> Routes;
         List<Signal> FlashSignals=new List<Signal>();
-        FixedConQueue<HandleMes> handleMess;
+        FixedConQueue<HandleMes> HandeMesQueue;
         readonly int Max_Wait_Seconds = 20;
         event UpdateMesHandle UpdateMesEvent;
         readonly object lockobj = new object();
@@ -260,6 +267,7 @@ namespace ATS
         }
 
 
+        ///正确操作信息产生工厂
         HandleMes HandleFactory(object obj)
         {
             HandleMes mes = new HandleMes();
@@ -287,6 +295,13 @@ namespace ATS
             }
             return mes;
         }
+
+        /// <summary>
+        /// 错误操作产生工厂
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="IsError"></param>
+        /// <returns></returns>
         HandleMes HandleFactory(object obj,bool IsError)
         {
             HandleMes mes = new HandleMes();
@@ -311,8 +326,7 @@ namespace ATS
                 }
                 if(IsError)
                 {
-                    mes.ErrorMes1 = "Error";
-                    mes.ErrorMes2 = "Error";
+                    mes.ErrorMes1 = "操作有误";
                 }
 
             }
@@ -324,8 +338,8 @@ namespace ATS
             lock(lockobj){
                 foreach (var mes in MesList)
                 {
-                    handleMess.Enqueue(HandleFactory(mes));
-                    if (handleMess.IsChanged) UpdateMesEvent(handleMess);
+                    HandeMesQueue.Enqueue(HandleFactory(mes));
+                    if (HandeMesQueue.IsChanged) UpdateMesEvent(HandeMesQueue);
                 }
             }
 
@@ -338,8 +352,8 @@ namespace ATS
                 {
                     foreach (var mes in MesList)
                     {
-                        handleMess.Enqueue(HandleFactory(mes, IsError));
-                        if (handleMess.IsChanged) UpdateMesEvent(handleMess);
+                        HandeMesQueue.Enqueue(HandleFactory(mes, IsError));
+                        if (HandeMesQueue.IsChanged) UpdateMesEvent(HandeMesQueue);
                     }
                 }
             }

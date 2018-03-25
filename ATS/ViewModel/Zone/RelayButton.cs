@@ -5,6 +5,10 @@ namespace ATS
 {
     public class RelayButton : 线路绘图工具.RelayButton
     {
+        public RelayButton()
+        {
+            isOccupied_ = false;
+        }
         public bool IsStatusChanged { get; set; }
 
         //bool ITrackSide.IsFailed { get; }

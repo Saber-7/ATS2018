@@ -271,7 +271,7 @@ namespace ATS
         /// 定义三角形及相关
         /// </summary>
         PathGeometry Triangle;
-        double[,] points = { { 12, 0 }, { 0, 6 }, { 0, -6 } };
+        double[,] points = { { 12, 0 }, { 0, 3 }, { 0, -3 } };
         void CreateTriangle()
         {
             Triangle = new PathGeometry();
