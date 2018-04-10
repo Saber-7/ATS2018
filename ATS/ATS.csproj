@@ -142,6 +142,7 @@
     <Compile Include="ViewModel\TrainViewModel.cs" />
     <Compile Include="ViewModel\ViewModelBase.cs" />
     <Compile Include="ViewModel\Zone\ATSRoute.cs" />
+    <Compile Include="ViewModel\Zone\Axle.cs" />
     <Compile Include="ViewModel\Zone\ICheckDistance.cs" />
     <Compile Include="ViewModel\Zone\IRailway.cs" />
     <Compile Include="ViewModel\Zone\OptionalRoute.cs" />

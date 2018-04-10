@@ -19,6 +19,7 @@ namespace ATS
         [XmlElement("CommandButton", typeof(线路绘图工具.CommandButton))]
         [XmlElement("SmallButton", typeof(线路绘图工具.SmallButton))]
         [XmlElement("GraphicElement", typeof(线路绘图工具.GraphicElement))]
+        [XmlElement("Axle", typeof(Axle))]
 
 
 
@@ -30,7 +31,17 @@ namespace ATS
         {
             using (StreamReader sr = new StreamReader(path))
             {
-                return new XmlSerializer(typeof(StationElements)).Deserialize(sr) as StationElements;
+                StationElements elements = new XmlSerializer(typeof(StationElements)).Deserialize(sr) as StationElements;
+
+                foreach (var item in elements.Elements)
+                {
+                    if (item is Axle)
+                    {
+                        (item as IDelayCreator).LoadDevice(elements.Elements);
+                    }
+                }
+
+                return elements;
             }
         }
 

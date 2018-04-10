@@ -12,8 +12,8 @@
     <Grid>
         <!--设定二列-->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="5*"></ColumnDefinition>
-            <ColumnDefinition Width="3*"></ColumnDefinition>
+            <ColumnDefinition Width="15*"></ColumnDefinition>
+            <ColumnDefinition Width="1*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition></RowDefinition>
@@ -75,7 +75,7 @@
                 <ColumnDefinition Width="135*"></ColumnDefinition>
                 <ColumnDefinition Width="352*"/>
                 <ColumnDefinition Width="487*"></ColumnDefinition>
-                <ColumnDefinition Width="487*"></ColumnDefinition>
+                <!--<ColumnDefinition Width="487*"></ColumnDefinition>-->
             </Grid.ColumnDefinitions>
 
             <DataGrid Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" RenderTransformOrigin="0.78,0.427" Grid.ColumnSpan="2" ItemsSource="{Binding TrainMesDsipaly}" AutoGenerateColumns="False">

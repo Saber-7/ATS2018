@@ -20,7 +20,6 @@ using System.Windows;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Windows.Threading;
-//using ZCToATS;
 using ZCATSMes;
 using System.Timers;
 using System.Data.Entity.Infrastructure;
@@ -34,7 +33,7 @@ using log4net.Config;
 using System.Configuration;
 using System.Collections.Specialized;
 using System.Windows.Documents;
-using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ATS
 {
@@ -70,18 +69,17 @@ namespace ATS
             InitThreads();
 
             //EF暖机,解决第一次打开慢的问题
-            //Task.Run(() =>
-            //    {
-            //        using (var pm=new PlanModel())
-            //        {
-            //            var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
-            //            var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
-            //            mappingCollection.GenerateViews(new List<EdmSchemaError>());
-            //        }
-            //    }
-            //    );
+            Task.Run(() =>
+                {
+                    using (var pm = new PlanModel())
+                    {
+                        var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
+                        var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                        mappingCollection.GenerateViews(new List<EdmSchemaError>());
+                    }
+                }
+                );
             InitTrain();
-            Log4ATS.Info("开始测试");
         }
 
         #region 配置信息相关，部分内容初始化自xml
@@ -320,80 +318,90 @@ namespace ATS
                 }
                 if (ZC2ATSinfo != null)
                 {
-                    Log4ATS.Info(ZC2ATSinfo.PositionId + "++++" + ZC2ATSinfo.PositionType+"  "+ZC2ATSinfo.Offset);
-
                     App.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         Train t = Trains.Find((Train tt) =>
                         {
                             return tt.TrainNum == ZC2ATSinfo.TrainId;
                         });
-                        t.RunMode = (ActualRunMode)ZC2ATSinfo.Runmode;
-                        t.IsEmergent = ZC2ATSinfo.IsEmergent;
-                        object locker = new object();
-                        //激活车
-                        if (!t.IsRegistered)
+                        if (t != null)
                         {
-                            lock (locker)
+                            t.RunMode = (ActualRunMode)ZC2ATSinfo.Runmode;
+                            t.IsEmergent = ZC2ATSinfo.IsEmergent;
+                            object locker = new object();
+                            //激活车
+                            if (!t.IsRegistered)
                             {
-                                try
+                                lock (locker)
                                 {
-                                    MCanvas.Children.Add(t);
-                                }
-                                catch
-                                {
-
-                                }
-                                if (SelectCollection != null)
-                                {
-                                    SelectCollection.Add(new LineSeries()
+                                    try
                                     {
-                                        Title = t.TrainNum.ToString(),
-                                        LineSmoothness = 0,
-                                        Values = new ChartValues<DateTimePoint>(),
-                                        Fill = new SolidColorBrush(),
-                                        LabelPoint = x => t.TrainNum.ToString(),
-                                    });
-                                    t.IsRegistered = true;
-                                    t.NowLineNum = SelectCollection.Count - 1;
-                                    int k = t.PlanLineNum = NowJiao++;
-                                    selectjiao jiao = SList[t.PlanLineNum];
-                                    if (jiao.ReturnMode == "否")
-                                        t.FindPathSD(jiao.StartSection, jiao.EndSection, null, null, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
-                                    else
-                                        t.FindPathSD(jiao.StartSection, jiao.EndSection, jiao.StartSection2, jiao.EndSection2, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
+                                        MCanvas.Children.Add(t);
+                                    }
+                                    catch
+                                    {
+
+                                    }
+                                    if (SelectCollection != null)
+                                    {
+                                        SelectCollection.Add(new LineSeries()
+                                        {
+                                            Title = t.TrainNum.ToString(),
+                                            LineSmoothness = 0,
+                                            Values = new ChartValues<DateTimePoint>(),
+                                            Fill = new SolidColorBrush(),
+                                            LabelPoint = x => t.TrainNum.ToString(),
+                                        });
+                                        t.IsRegistered = true;
+                                        t.NowLineNum = SelectCollection.Count - 1;
+                                        t.TrainGroupNum = SList[t.PlanLineNum].TrainGroupNum;
+                                        int k = t.PlanLineNum = NowJiao++;
+                                        selectjiao jiao = SList[t.PlanLineNum];
+                                        List<double> dis = (from p in StaNamesDict
+                                                            where p.Value == "转换轨"
+                                                            select p.Key).ToList();
+                                        SelectCollection[t.NowLineNum].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
+                                        if (jiao.ReturnMode == "否")
+                                            t.FindPathSD(jiao.StartSection, jiao.EndSection, null, null, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
+                                        else
+                                            t.FindPathSD(jiao.StartSection, jiao.EndSection, jiao.StartSection2, jiao.EndSection2, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
+                                    }
                                 }
                             }
-                        }
-                        //摆车位
-                        GraphicElement nowElement = t.UPdateTrainPosByOffset(ZC2ATSinfo.PositionType, ZC2ATSinfo.PositionId, ZC2ATSinfo.Direction, ZC2ATSinfo.Offset);
-                        TrainMes mes = TrainMesFactory(nowElement, ZC2ATSinfo);
-                        TrainMesQueue.Enqueue(mes);
-                        if (trainMesQueue.IsChanged)
-                            TrainMesDsipaly = new List<TrainMes>(trainMesQueue);
+                            //摆车位
+                            GraphicElement nowElement = t.UPdateTrainPosByOffset(ZC2ATSinfo.PositionType, ZC2ATSinfo.PositionId, ZC2ATSinfo.Direction, ZC2ATSinfo.Offset);
+                            TrainMes mes = TrainMesFactory(nowElement, ZC2ATSinfo);
+                            TrainMesQueue.Enqueue(mes);
+                            if (trainMesQueue.IsChanged)
+                                TrainMesDsipaly = new List<TrainMes>(trainMesQueue);
 
-                        if (t.Res != null && t.Res.Count != 0)
-                        {
-                            //开进路
-                            if (t.OpenRoute != null)
+                            if (t.Res != null && t.Res.Count != 0)
                             {
-                                ATSRoute route = t.OpenRoute;
-                                ATS.Signal signal = route.StartSignal as ATS.Signal;
-                                if (signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
+                                //开进路
+                                if (t.OpenRoute != null)
                                 {
-                                    List<object> objs = new List<object>();
-                                    objs.Add(route.StartSignal);
-                                    objs.Add(route.EndSignal);
-                                    autoCB.AddTwoDevice(objs);
+                                    ATSRoute route = t.OpenRoute;
+                                    ATS.Signal signal = route.StartSignal as ATS.Signal;
+                                    if (signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
+                                    {
+                                        List<object> objs = new List<object>();
+                                        objs.Add(route.StartSignal);
+                                        objs.Add(route.EndSignal);
+                                        autoCB.AddTwoDevice(objs);
+                                    }
                                 }
+
+
                             }
                             ////车注销
-                            if (ZC2ATSinfo.Runmode==(byte)ActualRunMode.注销)
+                            if (ZC2ATSinfo.Runmode == (byte)ActualRunMode.注销)
                             {
                                 MCanvas.Children.Remove(t);
                                 t.IsRegistered = false;
                             }
+
                         }
+
 
 
                     }));
@@ -472,7 +480,7 @@ namespace ATS
                         //wpf不能绑定queue 只能绑定list等少数集合故强行转一下
                         handleMesdipaly = new List<HandleMes>(HandleMesQueue);
                     }
-                        if(ShouldOpenRouteOrNot())
+                        //if(ShouldOpenRouteOrNot())
                         OpenFirstRoute();
                     }));
                 }
@@ -508,7 +516,7 @@ namespace ATS
             {
                 Route route = RC.Routes.Find((ATSRoute ar) =>
                   {
-                      if (ar.InCommingSections.First().Name == "ZHG1") return true;
+                      if (ar.IncomingSections.First().Name == "ZHG1") return true;
                       else return false;
                   });
                 autoCB.AddDevice(route.StartSignal);
@@ -518,7 +526,7 @@ namespace ATS
             {
                 Route route = RC.Routes.Find((ATSRoute ar) =>
                 {
-                    if (ar.InCommingSections.First().Name == "ZHG2") return true;
+                    if (ar.IncomingSections.First().Name == "ZHG2") return true;
                     else return false;
                 });
                 autoCB.AddDevice(route.StartSignal);
@@ -543,8 +551,11 @@ namespace ATS
               {
                   TimeSpan ts = (TimeSpan)t;
                   TimeSpan curts= DateTime.Now - DateTime.Today.Add(ts);
-                  if (curts <= TimeToLeave)
-                      return true;
+                    if (Math.Abs(curts.TotalSeconds) <= TimeToLeave.TotalSeconds)
+                    {
+                        return true;
+                    }
+
               }
             }
             return false;
@@ -552,6 +563,7 @@ namespace ATS
         }
 
         DateTime dt = DateTime.Now;
+        int preOffset, curOffset;
         void UpdateCountDown()
         {
             foreach (var item in ATPsMes.GetConsumingEnumerable())
@@ -559,17 +571,27 @@ namespace ATS
                 ATP2ATS ps = new ATP2ATS();
 
                 string mes = Encoding.UTF8.GetString(item.Mes);
-                curName = mes.Substring(0,5);
-                ps.TrainNum = Convert.ToUInt16(mes.Substring(5, 1));
+                String[] temps = Regex.Split(mes, "\\s+");
+                ps.TrainNum = Convert.ToUInt16(temps[0]);
+                curName = temps[1];
+                curOffset = Convert.ToInt32(temps[2]);
                 Train t = Trains.Find((Train tt) =>
                   {
                       return tt.TrainNum == ps.TrainNum;
                   });
                 if (curName != preName)
                 {
+                    //Log4ATS.Info(preOffset + "***********&" + curOffset);
+                    //如果到下一区段进站，则用该方法更新站场图
+                    //if (isInSta&&dis!=null)
+                    //{
+                    //    int nln = t.NowLineNum;
+                    //    SelectCollection[nln].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
+                    //    Log4ATS.Info(DateTime.Now + "    " + dis.FirstOrDefault());
+                    //    isInSta = false;
+                    //}
                     if (Section2StationName.ContainsKey(curName))
                     {
-                        //dt = DateTime.Now.Date.Add(DateTime.Now - DateTime.Today);
                         int nln = t.NowLineNum;
                         int pln = t.PlanLineNum;
                         string s = Section2StationName[curName];
@@ -580,6 +602,10 @@ namespace ATS
                         isInSta = true;
                         if (t != null && SList != null)
                         {
+                            if (!isInSta)
+                            {
+
+                            }
                             List<plan> plans = SList[t.PlanLineNum].plan.ToList();
                             TimeSpan? pts = null;
                             try
@@ -587,13 +613,15 @@ namespace ATS
                                 pts = plans.Find((plan pl) =>
                                 {
                                     //return pl.StaName == t.NowSection.Name;
-                                    return pl.StaName == Section2StationName[t.NowSection.Name];
+                                    return pl.StaName == s;
                                 }).ReachTime;
                             }
                             catch
                             {
 
                             }
+
+                            Log4ATS.Info("PTS："+pts);
 
                             if (pts != null)
                             {
@@ -615,57 +643,29 @@ namespace ATS
                                 bytes[0] = 0;
                                 bytes[1] = 0;
                                 bytes[2] = 10;
-                                bytes[3] = (byte)(waitTime);
+                                //bytes[3] = (byte)(waitTime);
+                                bytes[3] = 7;
                                 ATPsCom.SendData(bytes, item.EP);
+                                //Log4ATS.Info(waitTime);
+                                Log4ATS.Info(bytes[3]);
                             }
                         }
-
-                    }
-                    else if (isInSta)
-                    {
-                        int nln = t.NowLineNum;
-                        SelectCollection[nln].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
-                        isInSta = false;
                     }
                 }
-                preName = curName;
-
-                //if (ps != null)
-                //{
-                //    if (t != null&&SList!=null)
-                //    {
-                //        List<plan> plans = SList[t.PlanLineNum].plan.ToList();
-                //        TimeSpan? pts = null;
-                //        try
-                //        {
-                //            pts = plans.Find((plan pl) =>
-                //            {
-                //                return pl.StaName == Section2StationName[t.NowSection.Name];
-                //            }).ReachTime;
-                //        }
-                //        catch
-                //        {
-
-                //        }
-
-                //        if (pts != null)
-                //        {
-                //            DateTime pdt = DateTime.MinValue.Add((TimeSpan)pts);
-                //            TimeSpan ctt = DateTime.Now - pdt;
-                //            UInt16 ui;
-                //            if (ctt.Seconds < MinWaitTimePerStation)
-                //            {
-                //                ui = MinWaitTimePerStation;
-                //            }
-                //            else
-                //            {
-                //                ui = (UInt16)ctt.Seconds;
-                //            }
-                //            ATPsCom.SendData(MySerialize.serializeObject((UInt16)ctt.Seconds), item.EP);
-                //        }
-                //    }
-                //}
+                //该站第二个应答器算出站
+                else if (isInSta && dis != null && preOffset != curOffset)
+                {
+                   int  nln = t.NowLineNum;
+                    SelectCollection[nln].Values.Add(new DateTimePoint(DateTime.Now, dis.FirstOrDefault()));
+                    //Log4ATS.Info(DateTime.Now + "    " + dis.FirstOrDefault());
+                    isInSta = false;
+                }
+                //Log4ATS.Info(preOffset + "&&&&&&&&&&" + curOffset);
+                preName = string.Copy(curName);
+                preOffset = curOffset;
             }
+
+
         }
 
 
@@ -686,7 +686,9 @@ namespace ATS
                             {
                                 byte[] bytes = trybytes.bytes;
                                 //信号机相同
-                                return bytes[12] == curbytes[14] && bytes[13] == bytes[15] && bytes[13] == (byte)命令类型.列车按钮;
+                                if (bytes[12] == curbytes[14] && bytes[13] == bytes[15] && bytes[13] == (byte)命令类型.列车按钮)
+                                    return true;
+                                return false;
                             });
                             for(int i = 0; i < rmBytes.Count; i++)
                             {
@@ -699,12 +701,12 @@ namespace ATS
                     foreach (var ep in CBIsCom.REPs)
                     {
                         CBIsCom.SendData(curbytes, ep, curbytes.Length);
-                        Log4ATS.Info(curbytes[12]+"  "+curbytes[14]+ "---" + ep);
                     }
                     if(curbytes[13]==1&&curbytes[15]==1)
                         lock (lockobj)
                         {
                             Confirmbytes.Add(new TryBytes(curbytes,ConfirmTimes));
+                            //Log4ATS.Info(curbytes[12] +"     "+ curbytes[14]);
                         }
                     Array.Copy(curbytes, preBytes, curbytes.Length);
                 }
@@ -844,7 +846,7 @@ namespace ATS
 
         void InitDisFormatter()
         {
-              XFormatter = val => new DateTime((long)val).ToString("yyyy HH:mm:ss");
+              XFormatter = val => new DateTime((long)val).ToString("HH:mm:ss");
               YFormatter = (double x) => StaNamesDict.ContainsKey(x) ? StaNamesDict[x] :null ;
         }
 
@@ -1567,7 +1569,6 @@ namespace ATS
                     mes.Destnation = MASection.Name;
                 }
             }
-
             else mes.Destnation = null;
             mes.IsPlanTrain = "是";
             mes.TrainPos = ge==null?"无":ge.Name + " " + info.Offset.ToString()+"m";
@@ -1583,15 +1584,7 @@ namespace ATS
         }
     }
 
-    public enum ActualRunMode:byte
-    {
-        AM=1,
-        CM=2,
-        RM=3,
-        EUM=4,
-        注销=5
 
-    }
 
 
 }

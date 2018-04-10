@@ -93,6 +93,8 @@ namespace ATS.ViewModel
                 {
                     //
                 }
+                if (SJList.First()!=null)
+                PlanList = SJList.First().plan.ToList();
             }
 
 

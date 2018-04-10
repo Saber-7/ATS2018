@@ -51,7 +51,7 @@ namespace ATS
                 vector.Normalize();
                 DirVectorList.Add(vector);
             }
-            Direction = DefaultDirection.UpWard;
+            Direction = DefaultDirection.Upward;
         }
 
         /// <summary>
@@ -109,6 +109,9 @@ namespace ATS
         public bool IsStatusChanged { get; set; }
 
         bool isOccupied_ = true;
+
+        public Axle RelateAxle { get; set; }
+
         public bool IsOccupied
         {
             get { return isOccupied_; }
@@ -118,6 +121,10 @@ namespace ATS
                 {
                     isOccupied_ = value;
                     IsStatusChanged = true;
+                    if (RelateAxle != null)
+                    {
+                        RelateAxle.InvalidateVisual();
+                    }
                 }
             }
         }
@@ -184,7 +191,7 @@ namespace ATS
             double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
             Matrix matrix = Matrix.Identity;
             int n = graphics_.IndexOf(line);
-            Vector tv=Direction==DefaultDirection.UpWard?new Vector(-1,0):new Vector(1,0);
+            Vector tv=Direction==DefaultDirection.Upward ? new Vector(-1,0):new Vector(1,0);
             double cos=tv*DirVectorList[n];
             //可以这样算是个意外,但是可以证明正确
             double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
@@ -235,7 +242,7 @@ namespace ATS
             IsBlocked = (recvBuf[startByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[startByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[startByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TRUE_VALUE)?DefaultDirection.UpWard:DefaultDirection.DownWard;
+            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TRUE_VALUE)?DefaultDirection.Upward : DefaultDirection.Downward;
         }
 
         public void SetStartByte(int ID)

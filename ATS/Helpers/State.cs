@@ -67,4 +67,14 @@ namespace ATS
         区段按钮=4,
         功能按钮=5
     }
+
+    public enum ActualRunMode : byte
+    {
+        AM = 1,
+        CM = 2,
+        RM = 3,
+        EUM = 4,
+        注销 = 5
+
+    }
 }

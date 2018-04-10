@@ -14,7 +14,7 @@ namespace ATS
         {
             ResetDefaultStatus();
             CreateTriangle();
-            Direction = Section.DefaultDirection.UpWard;
+            Direction = Section.DefaultDirection.Upward;
         }
         public static int StartByte { get; set; }
         static Pen SingleLockPen_ = new Pen(Brushes.White, 7);
@@ -169,7 +169,7 @@ namespace ATS
 
         //占用标志位
         bool isOccupied_ = false;
-        bool IsOccupied
+        public bool IsOccupied
         {
             get { return isOccupied_; }
             set
@@ -178,9 +178,15 @@ namespace ATS
                 {
                     isOccupied_ = value;
                     IsStatusChanged = true;
+                    if (RelateAxle != null)
+                    {
+                        RelateAxle.InvalidateVisual();
+                    }
                 }
             }
         }
+
+        public Axle RelateAxle { get; set; }
 
         //进路锁闭
         bool isRouteLock_ = false;
@@ -297,7 +303,7 @@ namespace ATS
             double angle;
             int n = graphics_.IndexOf(line);
             //左上行
-            Vector tv = Direction == Section.DefaultDirection.UpWard ? new Vector(-1, 0) : new Vector(1, 0);
+            Vector tv = Direction == Section.DefaultDirection.Upward ? new Vector(-1, 0) : new Vector(1, 0);
             //可以这样算是个意外 
              angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X))*180/Math.PI;
             //道岔反放则反处理
@@ -424,7 +430,7 @@ namespace ATS
             IsBlocked = (recvBuf[sectionStartByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[sectionStartByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[sectionStartByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TRUE_VALUE) ? Section.DefaultDirection.UpWard : Section.DefaultDirection.DownWard;            
+            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TRUE_VALUE) ? Section.DefaultDirection.Upward : Section.DefaultDirection.Downward;            
             int position = recvBuf[startByte_ + 1] & 0x0f;
             SetPosition(position);
             IsSingleLock = (recvBuf[startByte_] & 0x0f) == TRUE_VALUE;

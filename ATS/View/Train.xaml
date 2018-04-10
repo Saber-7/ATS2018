@@ -7,11 +7,11 @@
              mc:Ignorable="d" d:DesignWidth="9" d:DesignHeight="9" >
     <Canvas>
         <!--<Polygon Points="0,-7 40,-7 47,0 40,7 0,7" Fill="Yellow" ></Polygon>-->
-        <Polygon Points="-20,-7,-20,7,20,7,20,-7" Fill="Blue"></Polygon>
+        <!--<Polygon Points="-20,-7,-20,7,20,7,20,-7" Fill="Blue"></Polygon>
         <Polygon Points="-27,0,-20,-7,-20,7" Fill="Blue"></Polygon>
-        <Polygon Points="27,0,20,-7,20,7" Fill="Blue"></Polygon>
+        <Polygon Points="27,0,20,-7,20,7" Fill="Blue"></Polygon>-->
         <Polygon Points="{Binding RecPoints}" Fill="{Binding RecColor}" Panel.ZIndex="0"></Polygon>
         <Polygon Points="{Binding ArrowPoints}" Fill="{Binding ArrowColor}" Panel.ZIndex="0"></Polygon>
-        <Label x:Name="Lab" Content="{Binding TrainNum}" Canvas.Left="-20" Canvas.Top="-13" Panel.ZIndex="1"/>
+        <Label x:Name="Lab" Content="{Binding TrainGroupNum}" Canvas.Left="-20" Canvas.Top="-13" Panel.ZIndex="1"/>
     </Canvas>
 </UserControl>

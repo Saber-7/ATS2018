@@ -117,7 +117,7 @@ namespace ATS
                         List<ATSRoute> tempRoutes = null;
                         tempRoutes = Routes.FindAll((ATSRoute route) =>
                         {
-                            foreach (Device d in route.InCommingSections)
+                            foreach (Device d in route.IncomingSections)
                             {
                                 if (d.Name == IncomingDevice.Name) return true;
                             }

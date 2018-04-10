@@ -77,9 +77,8 @@ namespace ATS
             Routes = routes;
             TrainNum = num;
             Section2StationName = section2StationName;
-            //FindPathSD("ZHG1", "T0107", "T0107", "ZHG2", RouteDirection.DIRDOWN, true);
-            //FindPathSD("ZHG2", "T0108", "T0108", "ZHG1", RouteDirection.DIRDOWN, true);
-
+            //FindPathSD("ZHG1", "T0407", "T0409", "ZHG2", RouteDirection.DIRDOWN, true);
+            //FindPathSD("ZHG2", "T0411", "T0411", "ZHG1", RouteDirection.DIRDOWN, true);
         }
 
         bool _IsLive = false;
@@ -224,6 +223,18 @@ namespace ATS
             }
         }
 
+        string _TrainGroupNum;
+        public string TrainGroupNum
+        {
+            get { return _TrainGroupNum; }
+            set{
+                if (_TrainGroupNum != value)
+                {
+                    _TrainGroupNum = value;
+                    RaisePropertyChanged("TrainGroupNum");
+                }
+            }
+        }
 
         int _DevType;
         public int DevType
@@ -351,7 +362,7 @@ namespace ATS
                     List<ATSRoute> routes = Res[0].Routes;
                     OpenRoute = routes.Find((ATSRoute r) =>
                     {
-                        foreach (Device item in r.InCommingSections)
+                        foreach (Device item in r.IncomingSections)
                         {
                             if (item == nowSection)
                                 return true;
@@ -912,7 +923,7 @@ namespace ATS
                     {
                         if (de.Name == src2) return true;
                     }
-                    foreach (var de in ar.InCommingSections)
+                    foreach (var de in ar.IncomingSections)
                     {
                         if (de.Name == src2) return true;
                     }
@@ -1034,7 +1045,7 @@ namespace ATS
             {
                 List<ATSRoute> PossibleRoutes = Routes.FindAll((ATSRoute route) =>
                 {
-                    foreach (Device d in route.InCommingSections)
+                    foreach (Device d in route.IncomingSections)
                     {
                         if (d.Name == Now.Name && !used.Contains(route.ID)) return true;
                     }

@@ -12,5 +12,9 @@ namespace ATS
         void AddInsulation();
         Graphic InsuLine { get; set; }
 
+        bool IsOccupied { get; set; }
+
+        Axle RelateAxle { get; set; }
+
     }
 }
