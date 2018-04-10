@@ -5,7 +5,7 @@
         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         xmlns:vm="clr-namespace:ATS.ViewModel"
         xmlns:local="clr-namespace:ATS"
-        Title="MainWindow" Height="712" Width="1469">
+        Title="ATS系统" Height="712" Width="1469">
     <!--<Window.DataContext>
         <vm:MainViewModel></vm:MainViewModel>
     </Window.DataContext>-->

@@ -370,7 +370,7 @@ namespace ATS
                             }
                             //摆车位
                             GraphicElement nowElement = t.UPdateTrainPosByOffset(ZC2ATSinfo.PositionType, ZC2ATSinfo.PositionId, ZC2ATSinfo.Direction, ZC2ATSinfo.Offset);
-                            TrainMes mes = TrainMesFactory(nowElement, ZC2ATSinfo);
+                            TrainMes mes = TrainMesFactory(t.NowSection, ZC2ATSinfo);
                             TrainMesQueue.Enqueue(mes);
                             if (trainMesQueue.IsChanged)
                                 TrainMesDsipaly = new List<TrainMes>(trainMesQueue);

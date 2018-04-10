@@ -400,6 +400,7 @@ namespace ATS
             if (item != null)
             {
                 Point origin = new Point(Canvas.GetLeft(item), Canvas.GetTop(item));
+                Log4ATS.Info(origin.X + "   " + origin.Y+" "+offset);
                 Vector LineDirVector=new Vector();
                 Canvas.SetZIndex(this, -1);
                 #region 直道
@@ -657,7 +658,7 @@ namespace ATS
                                 if (offset > rs.Lens[0])
                                 {
                                     LineDirVector = rs.DirVectorList[2];
-                                    double len = offset - rs.Lens[1];
+                                    double len = offset - rs.Lens[0];
                                     double x = DirVector[0].X * rs.Lens[0] + len * DirVector[1].X + StartPoint.X + origin.X;
                                     double y = DirVector[0].Y * rs.Lens[0] + len * DirVector[1].Y + StartPoint.Y + origin.Y;
                                     UpdateTrainPosByXY(new Point(x, y));
