@@ -56,7 +56,7 @@ namespace ATS
             Points = PointList[1];
             Elements = eles;
             Routes = routes;
-            TrainNum = num;
+            TrainGroupNum = num;
             //PathFind("ZHG2", "T0112");
             //FindPath("ZHG2", "T0310", RouteDirection.DIRDOWN);
             //FindSinglePath("ZHG2", "T0310", RouteDirection.DIRDOWN);
@@ -75,11 +75,34 @@ namespace ATS
             RecPoints = Rectangle;
             Elements = eles;
             Routes = routes;
-            TrainNum = num;
+            TrainGroupNum = num;
             Section2StationName = section2StationName;
+            _TraintState = 列车模式.非车队模式;
             //FindPathSD("ZHG1", "T0407", "T0409", "ZHG2", RouteDirection.DIRDOWN, true);
             //FindPathSD("ZHG2", "T0411", "T0411", "ZHG1", RouteDirection.DIRDOWN, true);
+            this.Lab.Tag = this;
         }
+
+        object TrainStateLocker = new object();
+        列车模式 _TraintState;
+
+        public 列车模式 TrainState
+        {
+            get {
+                lock(TrainStateLocker)
+                return _TraintState;
+            }
+            set
+            {
+                if(value!=_TraintState)
+                {
+                    lock (TrainStateLocker)
+                    _TraintState = value;
+                }
+            }
+        }
+
+
 
         bool _IsLive = false;
 
@@ -208,30 +231,30 @@ namespace ATS
             }
         }
 
-        int _TrainNum;
+        int _TrainGroupNum;
 
-        public int TrainNum
+        public int TrainGroupNum
         {
-            get { return _TrainNum; }
+            get { return _TrainGroupNum; }
             set 
             {
-                if (_TrainNum != value)
+                if (_TrainGroupNum != value)
                 {
-                    _TrainNum = value;
+                    _TrainGroupNum = value;
                     RaisePropertyChanged("TrainNum");
                 }
             }
         }
 
-        string _TrainGroupNum;
-        public string TrainGroupNum
+        string _TrainOrderNum;
+        public string TrainOrderNum
         {
-            get { return _TrainGroupNum; }
+            get { return _TrainOrderNum; }
             set{
-                if (_TrainGroupNum != value)
+                if (_TrainOrderNum != value)
                 {
-                    _TrainGroupNum = value;
-                    RaisePropertyChanged("TrainGroupNum");
+                    _TrainOrderNum = String.Copy(value);
+                    RaisePropertyChanged("TrainOrderNum");
                 }
             }
         }
@@ -484,7 +507,6 @@ namespace ATS
                 else if (item is RailSwitch)
                 {
                     RailSwitch rs = item as RailSwitch;
-                    if (rs.DirVectorList.Count == 0) rs.CreateDirVectors();
                     if (rs.Position == RailSwitch.SwitchPosition.PosNormal)
                     {
                         LineDirVector = rs.DirVectorList.First();
@@ -1246,5 +1268,11 @@ namespace ATS
     { 
         区段=1,
         道岔=2
+    }
+
+    public enum 列车模式
+    {
+        车队模式,
+        非车队模式
     }
 }

@@ -34,6 +34,8 @@ using System.Configuration;
 using System.Collections.Specialized;
 using System.Windows.Documents;
 using System.Text.RegularExpressions;
+using System.Windows.Shapes;
+using System.Windows.Controls;
 
 namespace ATS
 {
@@ -50,6 +52,7 @@ namespace ATS
 
         public MainViewModel(Canvas canvas)
         {
+            InitStation();
             InitCommand();
             MCanvas = canvas;
             LoadGraphicElements();
@@ -58,7 +61,7 @@ namespace ATS
             InitCommunication();//初始化通信模块
             InitSection2StationName();
             InitMes();
-            ReadAppConfig();
+
             
 
 
@@ -66,10 +69,11 @@ namespace ATS
             UpdateMesHandle UpdateHandleMesEvent = new UpdateMesHandle(UpdateHandleMes);
             manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
             autoCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
-            InitThreads();
 
-            //EF暖机,解决第一次打开慢的问题
-            Task.Run(() =>
+            try
+            {
+                //EF暖机,解决第一次打开慢的问题
+                Task.Run(() =>
                 {
                     using (var pm = new PlanModel())
                     {
@@ -78,8 +82,35 @@ namespace ATS
                         mappingCollection.GenerateViews(new List<EdmSchemaError>());
                     }
                 }
-                );
+                    );
+            }
+            catch {
+                MessageBox.Show("数据库连接故障");
+            }
+
+
             InitTrain();
+            InitThreads();
+            //WriteAppConfig();
+            ReadAppConfig();
+        }
+
+        List<Station> StationList;
+        void InitStation(String path= @"ConfigFiles\Station.xml")
+        {
+            StationList = new List<Station>();
+            XDocument xdoc = XDocument.Load(path);
+            foreach (var xxe in xdoc.Elements())
+            {
+                foreach (var xe in xxe.Elements())
+                {
+                    Station s = new Station();
+                    s.Name = xe.Element("name").Value;
+                    s.Distance = Convert.ToDouble(xe.Element("distance").Value);
+                    StationList.Add(s);
+                }
+            }
+            InitStaNameDic(null);
         }
 
         #region 配置信息相关，部分内容初始化自xml
@@ -113,16 +144,18 @@ namespace ATS
         string[][] RightButtonItems ={
                       new string[]{"总取消", "总人解", "信号关闭", "信号重开"},
                       new string[]{"总定位", "总反位", "单锁", "单解", "封锁", "解封"},
-                      new string[]{"封锁", "解封", "区故解"}};
+                      new string[]{"封锁", "解封", "区故解"},
+                      new string[] {"进入车队模式","退出车队模式"}
+        };
 
 
         /// <summary>
         /// 确认间隔 只对开进路确认
         /// </summary>
-        readonly private  int ConfirmInterval=6000;
+        private  int ConfirmInterval=6000;
 
         //反复确认次数只对开进路确认
-        readonly private int ConfirmTimes = 2;
+        private int ConfirmTimes = 2;
 
         #endregion
 
@@ -134,18 +167,23 @@ namespace ATS
         void ReadAppConfig()
         {
             NameValueCollection appSettings = System.Configuration.ConfigurationManager.AppSettings;
-            password = "888";
             try
             {
                 MinWaitTimePerStation = UInt16.Parse(appSettings["MinWaitTimePerStation"]);
                 CBISendInteval = int.Parse(appSettings["CBISendInteval"]);
                 CBINum = int.Parse(appSettings["CBINum"]);
+                password = appSettings["Password"];
+                ConfirmInterval = int.Parse(appSettings["ConfirmInterval"]);
+                ConfirmTimes = int.Parse(appSettings["ConfirmTimes"]);
             }
             catch
             {
                 MinWaitTimePerStation = 3;
                 CBISendInteval = 3000;
                 CBINum = 4;
+                password = "888";
+                ConfirmInterval = 7000;
+                ConfirmTimes = 2;
             }
         }
 
@@ -159,6 +197,8 @@ namespace ATS
             config.AppSettings.Settings.Add("MinWaitTimePerStation", "7");
             config.AppSettings.Settings.Add("CBINum","4");
             config.AppSettings.Settings.Add("CBISendInteval", "5000");
+            config.AppSettings.Settings.Add("ConfirmInterval", "5000");
+            config.AppSettings.Settings.Add("ConfirmTimes", "3");
 
             config.Save();
             ConfigurationManager.RefreshSection("appSettings");
@@ -266,6 +306,7 @@ namespace ATS
             {
                 Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName));
             }
+
         }
 
 
@@ -322,7 +363,7 @@ namespace ATS
                     {
                         Train t = Trains.Find((Train tt) =>
                         {
-                            return tt.TrainNum == ZC2ATSinfo.TrainId;
+                            return tt.TrainGroupNum == ZC2ATSinfo.TrainId;
                         });
                         if (t != null)
                         {
@@ -342,20 +383,20 @@ namespace ATS
                                     {
 
                                     }
-                                    if (SelectCollection != null)
+                                    if (SelectCollection != null&&SList!=null)
                                     {
                                         SelectCollection.Add(new LineSeries()
                                         {
-                                            Title = t.TrainNum.ToString(),
+                                            Title = t.TrainGroupNum.ToString(),
                                             LineSmoothness = 0,
                                             Values = new ChartValues<DateTimePoint>(),
                                             Fill = new SolidColorBrush(),
-                                            LabelPoint = x => t.TrainNum.ToString(),
+                                            LabelPoint = x => t.TrainGroupNum.ToString(),
                                         });
                                         t.IsRegistered = true;
                                         t.NowLineNum = SelectCollection.Count - 1;
-                                        t.TrainGroupNum = SList[t.PlanLineNum].TrainGroupNum;
                                         int k = t.PlanLineNum = NowJiao++;
+                                        t.TrainOrderNum = String.Copy(SList[t.PlanLineNum].TrainGroupNum);
                                         selectjiao jiao = SList[t.PlanLineNum];
                                         List<double> dis = (from p in StaNamesDict
                                                             where p.Value == "转换轨"
@@ -382,12 +423,34 @@ namespace ATS
                                 {
                                     ATSRoute route = t.OpenRoute;
                                     ATS.Signal signal = route.StartSignal as ATS.Signal;
+                                    SmallButton sb = SmallButtons.Find((SmallButton ssb) =>
+                                    {
+                                        return ssb.ID == signal.ID;
+                                    });
                                     if (signal.SColor != ATS.Signal.SignalColor.Green && signal.SColor != ATS.Signal.SignalColor.Yellow)
                                     {
-                                        List<object> objs = new List<object>();
-                                        objs.Add(route.StartSignal);
-                                        objs.Add(route.EndSignal);
-                                        autoCB.AddTwoDevice(objs);
+                                        if(t.TrainState== 列车模式.车队模式)
+                                        {
+                                            if (sb == null)
+                                            {
+                                                List<object> objs = new List<object>();
+                                                objs.Add(route.StartSignal);
+                                                objs.Add(route.EndSignal);
+                                                autoCB.AddTwoDevice(objs);
+                                            }
+                                            else
+                                            {
+                                                sb.ClickButton();
+                                                autoCB.AddDevice(sb);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            List<object> objs = new List<object>();
+                                            objs.Add(route.StartSignal);
+                                            objs.Add(route.EndSignal);
+                                            autoCB.AddTwoDevice(objs);
+                                        }
                                     }
                                 }
 
@@ -426,12 +489,14 @@ namespace ATS
                     {
                         int CBINum = recvBuf[0];
                         //设备起始号码
-                        int sRs = 0, sSec = 0, sSig = 0;
+                        int sRs = 0, sSec = 0, sSig = 0,sPd = 0,sRB = 0;
                         for (int i = 0; i < CBINum; i++)
                         {
                             sRs += RsNum[i];
                             sSec += SecNum[i];
                             sSig += SignalNum[i];
+                            sPd += PSDoorNum[i];
+                            //sRB += RBNum[i];
                         }
                         for (int i = 0; i < SecNum[CBINum]; i++)
                         {
@@ -465,8 +530,16 @@ namespace ATS
                                 Signals[Id].InvalidateVisual();
                         }
 
-
-                    const int helpTipFlag = 1134 + 128; // 默认
+                        for (int i = 0; i < PSDoorNum[CBINum]; i++)
+                        {
+                            int Id = sPd + i;
+                            PSdoors[Id].SetStartByte(i);
+                            PSdoors[Id].UpdateStatus(recvBuf, 0);
+                            if (PSdoors[Id].IsStatusChanged)
+                                PSdoors[Id].InvalidateVisual();
+                        }
+                        
+                        const int helpTipFlag = 1134 + 128; // 默认
                     if (recvBuf[helpTipFlag] != 0 && recvBuf[helpTipFlag] != 0xff)
                     {
                         int strLen = 0;
@@ -480,7 +553,7 @@ namespace ATS
                         //wpf不能绑定queue 只能绑定list等少数集合故强行转一下
                         handleMesdipaly = new List<HandleMes>(HandleMesQueue);
                     }
-                        //if(ShouldOpenRouteOrNot())
+                        //if (ShouldOpenRouteOrNot())
                         OpenFirstRoute();
                     }));
                 }
@@ -577,9 +650,9 @@ namespace ATS
                 curOffset = Convert.ToInt32(temps[2]);
                 Train t = Trains.Find((Train tt) =>
                   {
-                      return tt.TrainNum == ps.TrainNum;
+                      return tt.TrainGroupNum == ps.TrainNum;
                   });
-                if (curName != preName)
+                if (curName != preName && t != null)
                 {
                     //Log4ATS.Info(preOffset + "***********&" + curOffset);
                     //如果到下一区段进站，则用该方法更新站场图
@@ -590,7 +663,7 @@ namespace ATS
                     //    Log4ATS.Info(DateTime.Now + "    " + dis.FirstOrDefault());
                     //    isInSta = false;
                     //}
-                    if (Section2StationName.ContainsKey(curName))
+                    if (Section2StationName.ContainsKey(curName)&&SelectCollection!=null)
                     {
                         int nln = t.NowLineNum;
                         int pln = t.PlanLineNum;
@@ -621,7 +694,7 @@ namespace ATS
 
                             }
 
-                            Log4ATS.Info("PTS："+pts);
+                            //Log4ATS.Info("PTS："+pts);
 
                             if (pts != null)
                             {
@@ -646,8 +719,8 @@ namespace ATS
                                 //bytes[3] = (byte)(waitTime);
                                 bytes[3] = 7;
                                 ATPsCom.SendData(bytes, item.EP);
-                                //Log4ATS.Info(waitTime);
-                                Log4ATS.Info(bytes[3]);
+                                //Log4ATS.Info(waitTime+"   7");
+                                //Log4ATS.Info(bytes[3]);
                             }
                         }
                     }
@@ -753,10 +826,6 @@ namespace ATS
                         {
                             Confirmbytes.RemoveAt(i);
                         }
-
-
-
-
                     }
                 }
             }
@@ -775,7 +844,25 @@ namespace ATS
                 Signal signal = Signals.Find((Signal sg) => {
                     return sg.ID == bytes[12];
                 });
-                if (signal.SColor != Signal.SignalColor.Green && signal.SColor != Signal.SignalColor.GreenYellow) return false;
+                Route route =RC.Routes.Find((ATSRoute ar) =>{
+                    return ar.StartSignal.ID == bytes[12] && ar.EndSignal.ID == bytes[14];
+                });
+                if (signal.SColor != Signal.SignalColor.Green 
+                    && signal.SColor != Signal.SignalColor.GreenYellow) return false;
+                if(route!=null)
+                {
+                    Device de = route.InSections.First();
+                    if (de is Section)
+                    {
+                        Section sc = de as Section;
+                        return sc.IsOccupied;
+                    }
+                    else
+                    {
+                        RailSwitch rs = de as RailSwitch;
+                        return rs.IsOccupied;
+                    }
+                }
                 else return true;
             }
             else
@@ -831,16 +918,28 @@ namespace ATS
         public Dictionary<double, String> StaNamesDict { get; set; }
         void InitStaNameDic(List<selectjiao> sList)
         {
-            StaNamesDict = new Dictionary<double, string>();
-            for (int i = 0; i < sList.Count; i++)
+            if (sList != null)
             {
-                List<plan> pl = sList[i].plan.ToList();
-                for (int j = 0; j < pl.Count; j++)
+                StaNamesDict = new Dictionary<double, string>();
+                for (int i = 0; i < sList.Count; i++)
                 {
-                    double dis = (double)(pl[j].Distance);
-                    if (!StaNamesDict.ContainsKey(dis)) StaNamesDict.Add(dis, pl[j].StaName);
+                    List<plan> pl = sList[i].plan.ToList();
+                    for (int j = 0; j < pl.Count; j++)
+                    {
+                        double dis = (double)(pl[j].Distance);
+                        if (!StaNamesDict.ContainsKey(dis)) StaNamesDict.Add(dis, pl[j].StaName);
+                    }
                 }
             }
+            else
+            {
+                StaNamesDict = new Dictionary<double, string>();
+                foreach (var item in StationList)
+                {
+                    if (!StaNamesDict.ContainsKey(item.Distance)) StaNamesDict.Add(item.Distance, item.Name);
+                }
+            }
+
         }
 
 
@@ -900,7 +999,7 @@ namespace ATS
         object temp = new object();
         //显示集合
         private SeriesCollection _selectCollection;
-        private SeriesCollection _AdjustCollection;
+        private SeriesCollection _AdjustCollection=new SeriesCollection();
         public SeriesCollection SelectCollection
         {
             get {
@@ -1022,11 +1121,18 @@ namespace ATS
         void OpenPW(object obj)
         {
             SelectCollection = new SeriesCollection();
-            InitTrain();
-            var pw = new PlanWindow();
-            PlanViewModel pvm = pw.DataContext as PlanViewModel;
-            pvm.UpdateRunChartAction += InitPointSeries;
-            pw.ShowDialog();
+            try
+            {
+                var pw = new PlanWindow();
+                PlanViewModel pvm = pw.DataContext as PlanViewModel;
+                pvm.UpdateRunChartAction += InitPointSeries;
+                pw.ShowDialog();
+            }
+            catch
+            {
+                MessageBox.Show("数据库连接故障，请检查网络连接与配置!");
+            }
+
         }
 
         void cmdMouseLeftButtonDown(object obj)
@@ -1038,12 +1144,17 @@ namespace ATS
             else
             {
                 var De = (object)Mouse.DirectlyOver;
+                if (De is ATS.SmallButton)
+                {
+                    ATS.SmallButton sm = De as SmallButton;
+                    sm.ClickButton();
+                }
                 manualCB.AddDevice(De);
             }
         }
 
         //信号机右键，道岔右键，区段右键
-        ContextMenu[] cms=new ContextMenu[3];
+        ContextMenu[] cms=new ContextMenu[4];
 
 
         /// <summary>
@@ -1101,8 +1212,23 @@ namespace ATS
             {
                 if (tempObject != null)
                 {
-                    manualCB.AddDevice(tempObject);
-                    manualCB.AddDevice(name);
+                    if(tempObject is Train)
+                    {
+                        Train t = tempObject as Train;
+                        //"进入车队模式","退出车队模式"
+                        if (name == "进入车队模式")
+                        {
+                            t.TrainState = 列车模式.车队模式;
+                            t.TrainOrderNum += "队";
+                        }
+                        else if (name == "退出车队模式") t.TrainState = 列车模式.非车队模式;
+                    }
+                    else
+                    {
+                        manualCB.AddDevice(tempObject);
+                        manualCB.AddDevice(name);
+                    }
+
                 }
             }
             tempObject = null;
@@ -1125,6 +1251,28 @@ namespace ATS
         }
 
 
+        public static T FindVisualParent<T>(UIElement element) where T : UIElement
+        {
+            UIElement parent = element;
+            while (parent != null)
+            {
+                var correctlyTyped = parent as T;
+                if (correctlyTyped != null)
+                {
+                    return correctlyTyped;
+                }
+
+                parent = VisualTreeHelper.GetParent(parent) as UIElement;
+            }
+
+            return null;
+        }
+
+        public static T GetElementUnderMouse<T>() where T : UIElement
+        {
+            return FindVisualParent<T>(Mouse.DirectlyOver as UIElement);
+        }
+
         object tempObject;
         void cmdMouseRightButtonDown(object obj)
         {
@@ -1135,20 +1283,43 @@ namespace ATS
                 Signal t = (Signal)De;
                 cms[0].PlacementTarget = t;
                 cms[0].IsOpen = true;
+                tempObject = De;
             }
             else if (De is RailSwitch)
             {
                 RailSwitch t = (RailSwitch)De;
                 cms[1].PlacementTarget = t;
                 cms[1].IsOpen = true;
+                tempObject = De;
             }
             else if (De is Section)
             {
                 Section t = (Section)De;
                 cms[2].PlacementTarget = t;
                 cms[2].IsOpen = true;
+                tempObject = De;
             }
-            tempObject = De;
+            else if (De is Polygon)
+            {
+                Train train = ((De as Polygon).Parent as Canvas).Parent as Train;
+                tempObject = train;
+                cms[3].PlacementTarget = train;
+                cms[3].IsOpen = true;
+            }
+            else if(De is System.Windows.Controls.TextBlock)
+            {
+
+                Train train = GetElementUnderMouse<Train>();
+                tempObject = train;
+                cms[3].PlacementTarget = train;
+                cms[3].IsOpen = true;
+            }
+            //else if(De is Train)
+            //{
+            //    Train t = De as Train;
+            //    cms[3].PlacementTarget = t;
+            //    cms[3].IsOpen = true;
+            //}
         }
 
         void buttonCommand(object obj)
@@ -1368,12 +1539,17 @@ namespace ATS
         List<RailSwitch> RailSwitches = new List<RailSwitch>();
         List<Section> Sections = new List<Section>();
         List<Signal> Signals = new List<Signal>();
+        List<PSDoor> PSdoors = new List<PSDoor>();
+        List<SmallButton> SmallButtons = new List<SmallButton>();
+        List<RelayButton> RelayButtons = new List<RelayButton>();
 
         //保存不同联锁的设备数量
 
         List<int> RsNum = new List<int>();
         List<int> SecNum = new List<int>();
         List<int> SignalNum = new List<int>();
+        List<int> PSDoorNum = new List<int>();
+        List<int> RBNum = new List<int>();
 
 
         //记录不同联锁区段的最小SectionNum
@@ -1397,6 +1573,18 @@ namespace ATS
                 else if (item is Signal)
                 {
                     Signals.Add(item as Signal);
+                }
+                else if (item is PSDoor)
+                {
+                    PSdoors.Add(item as PSDoor);
+                }
+                else if (item is RelayButton)
+                {
+                    RelayButtons.Add(item as RelayButton);
+                }
+                else if (item is SmallButton)
+                {
+                    SmallButtons.Add(item as SmallButton);
                 }
             }
             
@@ -1426,10 +1614,23 @@ namespace ATS
                     }).Count;
                 SignalNum.Add(k);
             }
+            for (int i = 0; i < CBINum; i++)
+            {
+                int k = PSdoors.FindAll((PSDoor ps) =>
+                {
+                    return ps.StationID == i;
+                }).Count;
+                PSDoorNum.Add(k);
+                k = RelayButtons.FindAll((RelayButton rb) =>
+                {
+                    return rb.StationID == i;
+                }).Count;
+            }
 
             Section.StartByte = 8;
             RailSwitch.StartByte = Section.StartByte + 384;
             Signal.StartByte = RailSwitch.StartByte + 128;
+            PSDoor.StartByte = Signal.StartByte + 128 * 3;
 
             List<int> temp = new List<int>();
             foreach (var item in Sections)

@@ -35,6 +35,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>train_128px_1152991_easyicon.net.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.dll</HintPath>
@@ -152,6 +155,7 @@
     <Compile Include="ViewModel\Zone\RouteCreator.cs" />
     <Compile Include="ViewModel\Zone\Section.cs" />
     <Compile Include="ViewModel\Zone\Signal.cs" />
+    <Compile Include="ViewModel\Zone\SmallButton.cs" />
     <Compile Include="ViewModel\Zone\StationElements.cs" />
     <Compile Include="ViewModel\Zone\StationTopoloty.cs" />
     <Compile Include="ViewModel\Zone\TopolotyNode.cs" />
@@ -225,7 +229,9 @@
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="train_128px_1152991_easyicon.net.ico" />
+  </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>

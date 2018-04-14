@@ -37,7 +37,7 @@ namespace ATS
             //RouteLockPen_.StartLineCap = PenLineCap.Triangle;
             //RouteLockPen_.Thickness = 10;
             DirVectorList = new List<Vector>();
-
+            CreateDirVectors();
             CreateTriangle();
             
         }
@@ -204,7 +204,7 @@ namespace ATS
 
         protected override void OnRender(DrawingContext dc)
         {
-            if (DirVectorList.Count == 0) CreateDirVectors();
+            //if (DirVectorList.Count == 0) CreateDirVectors();
             foreach (Line line in graphics_)
             {
                 if (IsBlocked)

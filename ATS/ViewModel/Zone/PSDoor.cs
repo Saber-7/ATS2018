@@ -13,11 +13,11 @@ namespace ATS
 
         public PSDoor()
         {
-            //isDisconnected_ = true;
-            //IsOccupied = true;
-
             isDisconnected_ = false;
             IsOccupied = false;
+
+            //isDisconnected_ = true;
+            //IsOccupied = true;
 
         }
         //public bool IsFailed { get; }

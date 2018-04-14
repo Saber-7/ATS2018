@@ -73,7 +73,7 @@ namespace ATS
                 {
                     FlashSignals.Add((Signal)obj);
                 }
-                if (obj is RelayButton)
+                if (obj is RelayButton||obj is SmallButton)
                 {
                     TryBuildCmd(1);
                 }
@@ -126,7 +126,6 @@ namespace ATS
             {
                 BuildHandleMes(Clicks, true);
             }
-
         }
 
 
@@ -207,17 +206,32 @@ namespace ATS
 
                 if (Clicks[k / 2] is Device)
                 {
-                    atsCommand.DeviceQueue[k] = (byte)(Clicks[k / 2] as Device).ID;
-                    k++;
-                    if (Clicks[k / 2] is Signal)
-                        atsCommand.DeviceQueue[k] = (byte)命令类型.列车按钮;
-                    else if (Clicks[k / 2] is RailSwitch)
-                        atsCommand.DeviceQueue[k] = (byte)命令类型.道岔按钮;
-                    else if (Clicks[k / 2] is Section)
-                        atsCommand.DeviceQueue[k] = (byte)命令类型.区段按钮;
-                    else if (Clicks[k / 2] is RelayButton)
-                        atsCommand.DeviceQueue[k] = (byte)命令类型.功能按钮;
-                    k++;
+                    if (Clicks[k / 2] is SmallButton)
+                    {
+                        atsCommand.DeviceNum = 2;
+                        SmallButton sb= Clicks[k/2] as SmallButton;
+                        atsCommand.DeviceQueue[k++] = (byte)sb.ButtonState;
+                        atsCommand.DeviceQueue[k++] = (byte)sb.TypeID;
+                        atsCommand.DeviceQueue[k++] = (byte)sb.ID;
+                        atsCommand.DeviceQueue[k++] = 1;
+                    }
+                    else
+                    {
+                        atsCommand.DeviceQueue[k] = (byte)(Clicks[k / 2] as Device).ID;
+                        k++;
+                        if (Clicks[k / 2] is Signal)
+                            atsCommand.DeviceQueue[k] = (byte)命令类型.列车按钮;
+                        else if (Clicks[k / 2] is RailSwitch)
+                            atsCommand.DeviceQueue[k] = (byte)命令类型.道岔按钮;
+                        else if (Clicks[k / 2] is Section)
+                            atsCommand.DeviceQueue[k] = (byte)命令类型.区段按钮;
+                        else if (Clicks[k / 2] is RelayButton)
+                            atsCommand.DeviceQueue[k] = (byte)命令类型.功能按钮;
+                        else if (Clicks[k / 2] is SmallButton)
+                            atsCommand.DeviceQueue[k] = (byte)(Clicks[k / 2] as SmallButton).TypeID;
+                        k++;
+                    }
+
                 }
                 else if (Clicks[k / 2] is string)
                 {
@@ -256,7 +270,7 @@ namespace ATS
         {
             if (TestObjs.Count<2)
             {
-                return TestObjs.FirstOrDefault() is RelayButton; 
+                return TestObjs.FirstOrDefault() is RelayButton|| TestObjs.FirstOrDefault() is SmallButton; 
             }
             if(TestObjs.Count==2)
             {

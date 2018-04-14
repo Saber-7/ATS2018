@@ -17,10 +17,10 @@ namespace ATS
         [XmlElement("RailSwitch", typeof(RailSwitch))]
         [XmlElement("Signal", typeof(Signal))]
         [XmlElement("CommandButton", typeof(线路绘图工具.CommandButton))]
-        [XmlElement("SmallButton", typeof(线路绘图工具.SmallButton))]
+        [XmlElement("SmallButton", typeof(ATS.SmallButton))]
         [XmlElement("GraphicElement", typeof(线路绘图工具.GraphicElement))]
         [XmlElement("Axle", typeof(Axle))]
-
+        [XmlElement("Station", typeof(线路绘图工具.Station))]
 
 
         public List<线路绘图工具.GraphicElement> Elements { get; set; }

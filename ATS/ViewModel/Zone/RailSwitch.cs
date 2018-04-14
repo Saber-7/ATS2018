@@ -14,6 +14,7 @@ namespace ATS
         {
             ResetDefaultStatus();
             CreateTriangle();
+            CreateDirVectors();
             Direction = Section.DefaultDirection.Upward;
         }
         public static int StartByte { get; set; }
@@ -262,7 +263,7 @@ namespace ATS
 
         #region 彭亚枫添加
         public List<Vector> DirVectorList = new List<Vector>();
-        public void CreateDirVectors()
+        void CreateDirVectors()
         {
             foreach (var item in graphics_)
             {
