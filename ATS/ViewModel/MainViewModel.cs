@@ -52,6 +52,7 @@ namespace ATS
 
         public MainViewModel(Canvas canvas)
         {
+            ReadAppConfig();
             InitStation();
             InitCommand();
             MCanvas = canvas;
@@ -70,29 +71,33 @@ namespace ATS
             manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
             autoCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
 
-            try
-            {
+
                 //EF暖机,解决第一次打开慢的问题
                 Task.Run(() =>
                 {
-                    using (var pm = new PlanModel())
+                    try
                     {
-                        var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
-                        var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
-                        mappingCollection.GenerateViews(new List<EdmSchemaError>());
+                        using (var pm = new PlanModel())
+                        {
+                            var objectContext = ((IObjectContextAdapter)pm).ObjectContext;
+                            var mappingCollection = (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                            mappingCollection.GenerateViews(new List<EdmSchemaError>());
+                        }
                     }
-                }
-                    );
-            }
-            catch {
-                MessageBox.Show("数据库连接故障");
-            }
+                    catch
+                    {
+                        MessageBox.Show("数据库连接故障,请检查网络连接与配置！");
+                    }
+
+                });
+
+
 
 
             InitTrain();
             InitThreads();
             //WriteAppConfig();
-            ReadAppConfig();
+
         }
 
         List<Station> StationList;
@@ -592,6 +597,7 @@ namespace ATS
                       if (ar.IncomingSections.First().Name == "ZHG1") return true;
                       else return false;
                   });
+
                 autoCB.AddDevice(route.StartSignal);
                 autoCB.AddDevice(route.EndSignal);
             }
@@ -1121,17 +1127,17 @@ namespace ATS
         void OpenPW(object obj)
         {
             SelectCollection = new SeriesCollection();
-            try
-            {
+            //try
+            //{
                 var pw = new PlanWindow();
                 PlanViewModel pvm = pw.DataContext as PlanViewModel;
                 pvm.UpdateRunChartAction += InitPointSeries;
                 pw.ShowDialog();
-            }
-            catch
-            {
-                MessageBox.Show("数据库连接故障，请检查网络连接与配置!");
-            }
+            //}
+            //catch
+            //{
+                //MessageBox.Show("数据库连接故障，请检查网络连接与配置!");
+            //}
 
         }
 

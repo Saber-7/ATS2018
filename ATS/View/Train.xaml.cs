@@ -317,7 +317,7 @@ namespace ATS
         }
 
 
-        byte _dir = 170;
+        byte _dir = 0;
 
         public byte Dir
         {
@@ -329,7 +329,7 @@ namespace ATS
                     if (_dir == 85) ArrowPoints = RightArrow;
                     else if (_dir == 170) ArrowPoints = LeftArrow;
                     else ArrowPoints = null;
-
+                    RaisePropertyChanged("Dir");
                 } 
             }
         }
@@ -429,7 +429,8 @@ namespace ATS
                 #region 直道
                 if (item is Section)
                 {
-                    Section s = (Section)item;
+                    Section s = item as Section;
+                    if (s.DirVectorList.Count == 0) s.CreateDirVectors();
                     //左走
                     if (dir == (byte)(TrainDir.左行))
                     {
@@ -507,6 +508,7 @@ namespace ATS
                 else if (item is RailSwitch)
                 {
                     RailSwitch rs = item as RailSwitch;
+                    if (rs.DirVectorList.Count == 0) rs.CreateDirVectors();
                     if (rs.Position == RailSwitch.SwitchPosition.PosNormal)
                     {
                         LineDirVector = rs.DirVectorList.First();
@@ -721,6 +723,7 @@ namespace ATS
                 if (item is RailSwitch)
                 {
                     RailSwitch rs = item as RailSwitch;
+                    if (rs.DirVectorList.Count == 0) rs.CreateDefaultGraphic();
                     if (!rs.IsLeft)
                     {
 

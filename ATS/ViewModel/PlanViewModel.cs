@@ -18,7 +18,9 @@ namespace ATS.ViewModel
         public PlanViewModel()
         {
             InitCommand();
+            //Task.Run(new Action(InitPlans));
             InitPlans();
+            //InitPlans();
             //App.Current.Dispatcher.BeginInvoke(new Action(InitPlans));
 
         }
@@ -49,10 +51,19 @@ namespace ATS.ViewModel
         /// 初始化计划
         /// </summary>
         void InitPlans()
-        {
-            if(pm==null) pm = new PlanModel();
-            PlanItemList = (from c in pm.planitem
-                                       select c).ToList();
+        { 
+            try
+            {
+                if (pm == null) pm = new PlanModel();
+                PlanItemList = (from c in pm.planitem
+                                select c).ToList();
+            }
+            catch
+            {
+                MessageBox.Show("数据库连接故障，请检查网络连接与配置!");
+            }
+
+
 
         }
 

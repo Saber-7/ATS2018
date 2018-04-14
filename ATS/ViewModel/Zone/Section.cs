@@ -39,10 +39,9 @@ namespace ATS
             DirVectorList = new List<Vector>();
             CreateDirVectors();
             CreateTriangle();
-            
         }
 
-        void CreateDirVectors()
+        public void CreateDirVectors()
         {
             foreach (var item in graphics_)
             {
@@ -51,7 +50,6 @@ namespace ATS
                 vector.Normalize();
                 DirVectorList.Add(vector);
             }
-            Direction = DefaultDirection.Upward;
         }
 
         /// <summary>
@@ -192,6 +190,7 @@ namespace ATS
             Matrix matrix = Matrix.Identity;
             int n = graphics_.IndexOf(line);
             Vector tv=Direction==DefaultDirection.Upward ? new Vector(-1,0):new Vector(1,0);
+            if (DirVectorList.Count == 0) CreateDirVectors();
             double cos=tv*DirVectorList[n];
             //可以这样算是个意外,但是可以证明正确
             double angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X));
@@ -216,7 +215,7 @@ namespace ATS
                     (IsRouteLock ? RouteLockPen_ :
                     (IsProtected ? ProtectPen_ : DefaultPen_)));
                 //画箭头
-                if (IsRouteLock&&!IsProtected&&!IsOccupied&&graphics_.Count>0)
+                if (IsRouteLock&&!IsProtected&&!IsOccupied&&graphics_.Count>0&&Direction!=DefaultDirection.DirNone)
                 {   
                     Triangle.Transform = new MatrixTransform(CreateMatrix(line));
                     dc.DrawGeometry(Brushes.White,RouteLockPen_,Triangle);
@@ -242,7 +241,26 @@ namespace ATS
             IsBlocked = (recvBuf[startByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[startByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[startByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TRUE_VALUE)?DefaultDirection.Upward : DefaultDirection.Downward;
+            //Direction=(recvBuf[startByte_+2]& 0x0f)==(byte)(TRUE_VALUE)?DefaultDirection.Upward : DefaultDirection.Downward;
+            Direction = Byte2Dir(recvBuf[startByte_ + 2] & 0x0f);
+        }
+
+        Section.DefaultDirection Byte2Dir(int dirByte)
+        {
+            Section.DefaultDirection res;
+            switch (dirByte)
+            {
+                case 0x05:
+                    res = Section.DefaultDirection.Upward;
+                    break;
+                case 0x0A:
+                    res = Section.DefaultDirection.Downward;
+                    break;
+                default:
+                    res = Section.DefaultDirection.DirNone;
+                    break;
+            }
+            return res;
         }
 
         public void SetStartByte(int ID)

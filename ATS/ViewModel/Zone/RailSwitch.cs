@@ -15,7 +15,7 @@ namespace ATS
             ResetDefaultStatus();
             CreateTriangle();
             CreateDirVectors();
-            Direction = Section.DefaultDirection.Upward;
+            //Direction = Section.DefaultDirection.Upward;
         }
         public static int StartByte { get; set; }
         static Pen SingleLockPen_ = new Pen(Brushes.White, 7);
@@ -263,7 +263,7 @@ namespace ATS
 
         #region 彭亚枫添加
         public List<Vector> DirVectorList = new List<Vector>();
-        void CreateDirVectors()
+        public void CreateDirVectors()
         {
             foreach (var item in graphics_)
             {
@@ -298,19 +298,22 @@ namespace ATS
         /// <returns></returns>
         Matrix CreateMatrix(Line line)
         {
-            double offsetX = line.Pt0.X / 2 + line.Pt1.X / 2;
-            double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
             Matrix matrix = Matrix.Identity;
-            double angle;
-            int n = graphics_.IndexOf(line);
-            //左上行
-            Vector tv = Direction == Section.DefaultDirection.Upward ? new Vector(-1, 0) : new Vector(1, 0);
-            //可以这样算是个意外 
-             angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X))*180/Math.PI;
-            //道岔反放则反处理
-            if (IsLeft) angle += 180;
-            matrix.Rotate(angle);
-            matrix.Translate(offsetX, offsetY);
+            if (Direction!=Section.DefaultDirection.DirNone)
+            {
+                double offsetX = line.Pt0.X / 2 + line.Pt1.X / 2;
+                double offsetY = line.Pt0.Y / 2 + line.Pt1.Y / 2;
+                double angle;
+                int n = graphics_.IndexOf(line);
+                //左上行
+                Vector tv = Direction == Section.DefaultDirection.Upward ? new Vector(-1, 0) : new Vector(1, 0);
+                //可以这样算是个意外 
+                angle = (System.Math.Atan2(DirVectorList[n].Y, DirVectorList[n].X) - System.Math.Atan2(tv.Y, tv.X)) * 180 / Math.PI;
+                //道岔反放则反处理
+                if (IsLeft) angle += 180;
+                matrix.Rotate(angle);
+                matrix.Translate(offsetX, offsetY);
+            }
             return matrix;
         }
         #endregion
@@ -405,7 +408,7 @@ namespace ATS
                 Line line = (graphics_[i] as Line);
                 line.OnRender(dc, linePen);
                 //画方向
-                if (linePen == Section.RouteLockPen)
+                if (linePen == Section.RouteLockPen&&Direction!=Section.DefaultDirection.DirNone)
                 {
                     Triangle.Transform = new MatrixTransform(CreateMatrix(line));
                     dc.DrawGeometry(Brushes.White, Section.RouteLockPen, Triangle);
@@ -431,10 +434,29 @@ namespace ATS
             IsBlocked = (recvBuf[sectionStartByte_] >> 4) == TRUE_VALUE;
             IsProtected = (recvBuf[sectionStartByte_ + 1] & 0x0f) == TRUE_VALUE;
             IsOccupied = (recvBuf[sectionStartByte_ + 1] >> 4) == TRUE_VALUE;
-            Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TRUE_VALUE) ? Section.DefaultDirection.Upward : Section.DefaultDirection.Downward;            
+            //Direction = (recvBuf[sectionStartByte_ + 2] & 0x0f) == (byte)(TRUE_VALUE) ? Section.DefaultDirection.Upward : Section.DefaultDirection.Downward; 
+            Direction = Byte2Dir((recvBuf[sectionStartByte_ + 2] & 0x0f));
             int position = recvBuf[startByte_ + 1] & 0x0f;
             SetPosition(position);
             IsSingleLock = (recvBuf[startByte_] & 0x0f) == TRUE_VALUE;
+        }
+
+        Section.DefaultDirection Byte2Dir(int dirByte)
+        {
+            Section.DefaultDirection res;
+            switch(dirByte)
+            {
+                case 0x05:
+                    res = Section.DefaultDirection.Upward;
+                    break;
+                case 0x0A:
+                    res = Section.DefaultDirection.Downward;
+                    break;
+                default:
+                    res = Section.DefaultDirection.DirNone;
+                    break;
+            }
+            return res;
         }
 
         public override string ToString()

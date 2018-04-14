@@ -11,7 +11,7 @@
         <Polygon Points="-27,0,-20,-7,-20,7" Fill="Blue"></Polygon>
         <Polygon Points="27,0,20,-7,20,7" Fill="Blue"></Polygon>-->
         <Polygon Points="{Binding RecPoints}" Fill="{Binding RecColor}" Panel.ZIndex="0"></Polygon>
-        <Polygon Points="{Binding ArrowPoints}" Fill="{Binding ArrowColor}" Panel.ZIndex="1"></Polygon>
+        <Polygon Points="{Binding ArrowPoints}" Fill="{Binding ArrowColor}" Panel.ZIndex="0"></Polygon>
         <Label x:Name="Lab" Content="{Binding TrainOrderNum}" Canvas.Left="-20" Canvas.Top="-13" Panel.ZIndex="0"/>
     </Canvas>
 </UserControl>
