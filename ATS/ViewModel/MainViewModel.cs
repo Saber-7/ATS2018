@@ -812,7 +812,7 @@ namespace ATS
                 Thread.Sleep(ConfirmInterval);
                 lock (lockobj)
                 {
-                    for(int i= Confirmbytes.Count-1;i>0;i--)
+                    for(int i= Confirmbytes.Count-1;i>-1;i--)
                     {
                         if (!IsRouteOpen(Confirmbytes[i].bytes))
                         {
