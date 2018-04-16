@@ -445,8 +445,16 @@ namespace ATS
                                             }
                                             else
                                             {
-                                                sb.ClickButton();
-                                                autoCB.AddDevice(sb);
+                                                if (!signal.IsCBTCRoute)
+                                                {
+                                                    sb.PressDown();
+                                                    autoCB.AddDevice(sb);
+                                                }
+                                                else
+                                                {
+
+                                                }
+
                                             }
                                         }
                                         else
@@ -1153,8 +1161,20 @@ namespace ATS
                 if (De is ATS.SmallButton)
                 {
                     ATS.SmallButton sm = De as SmallButton;
-                    sm.ClickButton();
+                    Signal s=Signals.Find((Signal ss)=>{
+                    return ss.ID==sm.ID;
+                    });
+                    if(s.IsCBTCRoute)
+                    {
+
+                    }else
+                    {
+                        sm.PressDown();
+                        manualCB.AddDevice(De);
+                    }
                 }
+
+                else
                 manualCB.AddDevice(De);
             }
         }

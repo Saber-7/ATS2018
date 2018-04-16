@@ -16,13 +16,15 @@ namespace ATS
         }
 
 
-        public void ClickButton()
+        public void PressDown()
         {
-            if (ButtonState == 按钮.弹起)
-                ButtonState = 按钮.按下;
-            else ButtonState = 按钮.弹起;
+            ButtonState = 按钮.按下;
         }
 
+        public void PressUp()
+        {
+            ButtonState = 按钮.弹起;
+        }
 
         internal 按钮 ButtonState
         {
