@@ -411,6 +411,10 @@ namespace ATS
                                             t.FindPathSD(jiao.StartSection, jiao.EndSection, null, null, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
                                         else
                                             t.FindPathSD(jiao.StartSection, jiao.EndSection, jiao.StartSection2, jiao.EndSection2, jiao.Dir == "上行" ? RouteDirection.DIRDOWN : RouteDirection.DIRUP, jiao.ReturnMode == "否" ? false : true);
+                                        if(t.Res==null||t.Res.Count==0)
+                                        {
+                                            MessageBox.Show("进路排列失败，请检查计划！");
+                                        }
                                     }
                                 }
                             }

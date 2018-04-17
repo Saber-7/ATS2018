@@ -83,6 +83,25 @@ namespace ATS
             this.Lab.Tag = this;
         }
 
+        public Train(List<线路绘图工具.GraphicElement> eles, List<ATSRoute> routes, int num, ConcurrentDictionary<string, string> section2StationName,CommandBuilder cb)
+        {
+            InitializeComponent();
+            DataContext = this;
+            //com.ListenControlData();
+            Points = PointList[1];
+            RecPoints = Rectangle;
+            Elements = eles;
+            Routes = routes;
+            TrainGroupNum = num;
+            Section2StationName = section2StationName;
+            _TraintState = 列车模式.非车队模式;
+            //FindPathSD("ZHG1", "T0407", "T0409", "ZHG2", RouteDirection.DIRDOWN, true);
+            //FindPathSD("ZHG2", "T0411", "T0411", "ZHG1", RouteDirection.DIRDOWN, true);
+            _AutoBuilder = cb;
+        }
+
+        private CommandBuilder _AutoBuilder;
+
         object TrainStateLocker = new object();
         列车模式 _TraintState;
 
@@ -330,6 +349,13 @@ namespace ATS
                     else if (_dir == 170) ArrowPoints = LeftArrow;
                     else ArrowPoints = null;
                     RaisePropertyChanged("Dir");
+                    if(OpenRoute!=null)
+                    {
+                        List<object> objs = new List<object>();
+                        objs.Add(OpenRoute.StartSignal);
+                        objs.Add(OpenRoute.EndSignal);
+                        _AutoBuilder.AddTwoDevice(objs);
+                    }
                 } 
             }
         }
