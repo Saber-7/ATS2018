@@ -309,7 +309,7 @@ namespace ATS
             List<IPList> ATPs=IPConfigure.IPList.FindAll((IPList ipl)=>{return ipl.DeviceName.Length>2&&ipl.DeviceName.Substring(0,3)=="ATP";});
             foreach (var item in ATPs)
             {
-                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName));
+                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName,autoCB));
             }
 
         }

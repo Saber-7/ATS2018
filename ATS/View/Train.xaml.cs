@@ -349,7 +349,7 @@ namespace ATS
                     else if (_dir == 170) ArrowPoints = LeftArrow;
                     else ArrowPoints = null;
                     RaisePropertyChanged("Dir");
-                    if(OpenRoute!=null)
+                    if(OpenRoute!=null&&_AutoBuilder!=null)
                     {
                         List<object> objs = new List<object>();
                         objs.Add(OpenRoute.StartSignal);
