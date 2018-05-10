@@ -100,6 +100,39 @@ namespace ATS
             _AutoBuilder = cb;
         }
 
+        public Train(List<线路绘图工具.GraphicElement> eles, List<ATSRoute> routes, int num, ConcurrentDictionary<string, string> section2StationName, CommandBuilder cb,SolveInterLockHandle SILhandle)
+        {
+            InitializeComponent();
+            DataContext = this;
+            //com.ListenControlData();
+            Points = PointList[1];
+            RecPoints = Rectangle;
+            Elements = eles;
+            Routes = routes;
+            TrainGroupNum = num;
+            Section2StationName = section2StationName;
+            _TraintState = 列车模式.非车队模式;
+            //FindPathSD("ZHG1", "T0407", "T0409", "ZHG2", RouteDirection.DIRDOWN, true);
+            //FindPathSD("ZHG2", "T0411", "T0411", "ZHG1", RouteDirection.DIRDOWN, true);
+            _AutoBuilder = cb;
+            this.SolveInterLockEvent = SILhandle;
+        }
+
+        HashSet<ATSRoute> _RouteOpened;
+        event SolveInterLockHandle SolveInterLockEvent;
+
+        public void AddOpenedRoute(ATSRoute route)
+        {
+            if(!_RouteOpened.Contains(route))
+            this._RouteOpened.Add(route);
+        }
+        public bool IsOpenRouteOpened()
+        {
+            if (OpenRoute != null)
+                return this._RouteOpened.Contains(OpenRoute);
+            else return true;
+        }
+
         private CommandBuilder _AutoBuilder;
 
         object TrainStateLocker = new object();
@@ -356,6 +389,7 @@ namespace ATS
                         objs.Add(OpenRoute.EndSignal);
                         _AutoBuilder.AddTwoDevice(objs);
                     }
+                    this.SolveInterLockEvent(this);
                 } 
             }
         }
@@ -1015,6 +1049,7 @@ namespace ATS
                 }
                 k = Math.Max(k1, k2);
                 this.Res = new List<OptionalRoutes>();
+                this._RouteOpened = new HashSet<ATSRoute>();
                 for (int i = 0; i < k; i++)
                 {
                     this.Res.Add(res1[i]);
