@@ -46,12 +46,14 @@ namespace ATS
     }
 
     delegate void UpdateMesHandle(FixedConQueue<HandleMes> fixqueue);
+    delegate void SolveInterLockHandle(Train t);
     public class MainViewModel:ViewModelBase
     {
         private  static readonly ILog Log4ATS=log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         public MainViewModel(Canvas canvas)
         {
+            ResetLock();
             ReadAppConfig();
             InitStation();
             InitCommand();
@@ -67,9 +69,10 @@ namespace ATS
 
 
             ClassifyElements();
-            UpdateMesHandle UpdateHandleMesEvent = new UpdateMesHandle(UpdateHandleMes);
-            manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
-            autoCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMesEvent);
+            //UpdateMesHandle UpdateHandleMesEvent = new UpdateMesHandle(UpdateHandleMes);
+            //SolveInterLockHandle SolveInterLockEvent=new SolveInterLockHandle(SolveInterlocking);
+            manualCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMes);
+            autoCB = new CommandBuilder(CBIMesSend, RC.Routes, HandleMesQueue, UpdateHandleMes);
 
 
                 //EF暖机,解决第一次打开慢的问题
@@ -309,7 +312,7 @@ namespace ATS
             List<IPList> ATPs=IPConfigure.IPList.FindAll((IPList ipl)=>{return ipl.DeviceName.Length>2&&ipl.DeviceName.Substring(0,3)=="ATP";});
             foreach (var item in ATPs)
             {
-                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName,autoCB));
+                Trains.Add(new Train(stationElements_.Elements, RC.Routes,item.DeviceID,Section2StationName,autoCB,SolveInterlocking));
             }
 
         }
@@ -348,7 +351,7 @@ namespace ATS
                 {
                     if (!ZCMesDic.ContainsKey(ZC2ATSinfo.TrainId))
                     {
-                        ZCMesDic.Add(ZC2ATSinfo.TrainId,ZC2ATSinfo);
+                        ZCMesDic.Add(ZC2ATSinfo.TrainId, ZC2ATSinfo);
                     }
                     else
                     {
@@ -469,6 +472,10 @@ namespace ATS
                                             autoCB.AddTwoDevice(objs);
                                         }
                                     }
+                                    else if (signal.SColor == ATS.Signal.SignalColor.Green || signal.SColor == ATS.Signal.SignalColor.Yellow)
+                                    {
+                                        t.AddOpenedRoute(route);
+                                    }
                                 }
 
 
@@ -586,6 +593,12 @@ namespace ATS
 
 
         Section ZHG1, ZHG2;
+        bool IsZHG1Lock, IsZHG2Lcok;
+        void ResetLock()
+        {
+            IsZHG1Lock = false;
+            IsZHG2Lcok = false;
+        }
         /// <summary>
         /// 上转换轨直接开启下一段进路
         /// </summary>
@@ -602,7 +615,7 @@ namespace ATS
                 else return false;
             }) as Section;
 
-            if (ZHG1 != null && ZHG1.IsOccupied)
+            if (ZHG1 != null && ZHG1.IsOccupied && !ZHG1.IsProtected&&!IsZHG1Lock)
             {
                 Route route = RC.Routes.Find((ATSRoute ar) =>
                   {
@@ -612,8 +625,9 @@ namespace ATS
 
                 autoCB.AddDevice(route.StartSignal);
                 autoCB.AddDevice(route.EndSignal);
+                IsZHG2Lcok = true;
             }
-            if (ZHG2 != null && ZHG2.IsOccupied)
+            if (ZHG2 != null && ZHG2.IsOccupied && !ZHG2.IsProtected&&!IsZHG2Lcok)
             {
                 Route route = RC.Routes.Find((ATSRoute ar) =>
                 {
@@ -622,6 +636,7 @@ namespace ATS
                 });
                 autoCB.AddDevice(route.StartSignal);
                 autoCB.AddDevice(route.EndSignal);
+                IsZHG1Lock = true;
             }
         }
 
@@ -844,6 +859,30 @@ namespace ATS
                         {
                             Confirmbytes.RemoveAt(i);
                         }
+                    }
+                    //foreach (var t in Trains)
+                    //{
+                        
+                    //}
+                }
+            }
+
+        }
+
+        object locker = new object();
+         void  SolveInterlocking(Train curTrain)
+        {
+            lock(locker)
+            {
+                foreach (var t in Trains)
+                {
+                    if (t != curTrain && t != null && t.OpenRoute != null && !t.IsOpenRouteOpened())
+                    {
+                        ATSRoute route = t.OpenRoute;
+                        List<object> objs = new List<object>();
+                        objs.Add(route.StartSignal);
+                        objs.Add(route.EndSignal);
+                        autoCB.AddTwoDevice(objs);
                     }
                 }
             }
@@ -1138,6 +1177,7 @@ namespace ATS
 
         void OpenPW(object obj)
         {
+            ResetLock();
             SelectCollection = new SeriesCollection();
             //try
             //{

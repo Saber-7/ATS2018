@@ -157,7 +157,7 @@ namespace ATS
 
 
         bool isProtected_ = true;
-        bool IsProtected
+        public bool IsProtected
         {
             get { return isProtected_; }
             set
